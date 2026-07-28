@@ -99,9 +99,9 @@ class BGCP_Product {
 	}
 
 	public static function frontend_fields() {
-		global $product;
+		$product = wc_get_product( get_the_ID() );
 
-		if ( ! self::is_gift_card( $product->get_id() ) ) {
+		if ( ! $product || ! self::is_gift_card( $product->get_id() ) ) {
 			return;
 		}
 
@@ -126,7 +126,7 @@ class BGCP_Product {
 		if ( ! is_product() ) {
 			return;
 		}
-		global $product;
+		$product = wc_get_product( get_the_ID() );
 		if ( ! $product || ! self::is_gift_card( $product->get_id() ) ) {
 			return;
 		}
