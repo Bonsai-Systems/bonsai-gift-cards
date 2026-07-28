@@ -59,7 +59,12 @@ function bgcp_register_email_class( $email_classes ) {
 	return $email_classes;
 }
 
-register_activation_hook( __FILE__, array( 'BGCP_DB', 'create_table' ) );
+register_activation_hook( __FILE__, 'bgcp_activate' );
+
+function bgcp_activate() {
+	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-db.php';
+	BGCP_DB::create_table();
+}
 
 add_action(
 	'before_woocommerce_init',
