@@ -37,7 +37,6 @@ function bgcp_init() {
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-settings.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-product.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-order.php';
-	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-email.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-cart.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-shortcode.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-admin.php';
@@ -55,7 +54,17 @@ function bgcp_init() {
 }
 
 function bgcp_register_email_class( $email_classes ) {
-	$email_classes['BGCP_Email_Gift_Card'] = new BGCP_Email_Gift_Card();
+	// WC_Email is only guaranteed to exist once WC_Emails::init() has
+	// started running (it includes its own base class right before firing
+	// this filter), so this file is required here rather than eagerly in
+	// bgcp_init() — WooCommerce's email system can load long after
+	// 'plugins_loaded', e.g. on an admin page's asset check.
+	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-email.php';
+
+	if ( class_exists( 'BGCP_Email_Gift_Card' ) ) {
+		$email_classes['BGCP_Email_Gift_Card'] = new BGCP_Email_Gift_Card();
+	}
+
 	return $email_classes;
 }
 
