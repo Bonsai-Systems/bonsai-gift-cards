@@ -1,0 +1,62 @@
+.bgcp-checkout-field {
+	margin-top: 16px;
+	padding: 16px;
+	background: #e2ecf3;
+	border-radius: 6px;
+}
+
+.bgcp-checkout-field h3 {
+	margin: 0 0 10px;
+	font-size: 14px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.bgcp-field-row {
+	display: flex;
+	gap: 8px;
+}
+
+.bgcp-field-row input {
+	flex: 1;
+	padding: 8px 10px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+}
+
+.bgcp-field-row button {
+	padding: 8px 16px;
+	background: #ee4367;
+	color: #fff;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.bgcp-field-row button:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.bgcp-applied-card {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 6px 0;
+	font-size: 14px;
+}
+
+.bgcp-remove-btn {
+	background: none;
+	border: none;
+	color: #000;
+	text-decoration: underline;
+	cursor: pointer;
+	font-size: 13px;
+}
+
+.bgcp-error {
+	color: #ee4367;
+	font-size: 13px;
+	margin: 8px 0 0;
+}

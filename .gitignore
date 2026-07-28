@@ -1,0 +1,24 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.sublime-*
+
+# Dependencies (if composer/npm ever added)
+/vendor/
+/node_modules/
+
+# Logs
+*.log
+debug.log
+
+# Local env
+.env
+.env.*
+
+# Build artifacts
+/dist/
+*.zip
