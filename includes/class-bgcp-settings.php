@@ -10,6 +10,8 @@ class BGCP_Settings {
 	const OPTION_IMAGE_ID   = 'bgcp_gift_card_image_id';
 	const OPTION_EMAIL_INTRO = 'bgcp_email_intro';
 	const OPTION_EXPIRY_MONTHS = 'bgcp_default_expiry_months';
+	const OPTION_REPORT_EMAIL = 'bgcp_report_email';
+	const OPTION_REPORT_FREQUENCY = 'bgcp_report_frequency';
 
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
@@ -61,6 +63,15 @@ class BGCP_Settings {
 		return absint( get_option( self::OPTION_EXPIRY_MONTHS, 0 ) );
 	}
 
+	public static function get_report_email() {
+		return get_option( self::OPTION_REPORT_EMAIL, '' );
+	}
+
+	public static function get_report_frequency() {
+		$frequency = get_option( self::OPTION_REPORT_FREQUENCY, '' );
+		return in_array( $frequency, array( 'weekly', 'monthly' ), true ) ? $frequency : '';
+	}
+
 	public static function render_page() {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_die( esc_html__( 'Not allowed.', 'bgcp' ) );
@@ -110,6 +121,24 @@ class BGCP_Settings {
 							<p class="description"><?php esc_html_e( '0 = never expires. Only applies to cards created manually from the admin list — cards sold via a product use that product\'s own expiry setting.', 'bgcp' ); ?></p>
 						</td>
 					</tr>
+					<tr>
+						<th><label for="bgcp_report_email"><?php esc_html_e( 'Sales report email address', 'bgcp' ); ?></label></th>
+						<td>
+							<input type="email" name="bgcp_report_email" id="bgcp_report_email" class="regular-text" value="<?php echo esc_attr( self::get_report_email() ); ?>" />
+							<p class="description"><?php esc_html_e( 'Where to send the gift card sales CSV report. Leave blank to disable.', 'bgcp' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th><label for="bgcp_report_frequency"><?php esc_html_e( 'Sales report frequency', 'bgcp' ); ?></label></th>
+						<td>
+							<select name="bgcp_report_frequency" id="bgcp_report_frequency">
+								<option value="" <?php selected( self::get_report_frequency(), '' ); ?>><?php esc_html_e( 'Off', 'bgcp' ); ?></option>
+								<option value="weekly" <?php selected( self::get_report_frequency(), 'weekly' ); ?>><?php esc_html_e( 'Weekly', 'bgcp' ); ?></option>
+								<option value="monthly" <?php selected( self::get_report_frequency(), 'monthly' ); ?>><?php esc_html_e( 'Monthly', 'bgcp' ); ?></option>
+							</select>
+							<p class="description"><?php esc_html_e( 'A CSV of every gift card created in that period is emailed to the address above. Requires a report email address to be set.', 'bgcp' ); ?></p>
+						</td>
+					</tr>
 				</table>
 
 				<?php submit_button( __( 'Save Settings', 'bgcp' ) ); ?>
@@ -127,6 +156,17 @@ class BGCP_Settings {
 		update_option( self::OPTION_IMAGE_ID, isset( $_POST['bgcp_gift_card_image_id'] ) ? absint( $_POST['bgcp_gift_card_image_id'] ) : 0 );
 		update_option( self::OPTION_EMAIL_INTRO, isset( $_POST['bgcp_email_intro'] ) ? sanitize_textarea_field( wp_unslash( $_POST['bgcp_email_intro'] ) ) : '' );
 		update_option( self::OPTION_EXPIRY_MONTHS, isset( $_POST['bgcp_default_expiry_months'] ) ? absint( $_POST['bgcp_default_expiry_months'] ) : 0 );
+
+		$report_email = isset( $_POST['bgcp_report_email'] ) ? sanitize_email( wp_unslash( $_POST['bgcp_report_email'] ) ) : '';
+		update_option( self::OPTION_REPORT_EMAIL, $report_email );
+
+		$report_frequency = isset( $_POST['bgcp_report_frequency'] ) ? sanitize_text_field( wp_unslash( $_POST['bgcp_report_frequency'] ) ) : '';
+		$report_frequency = in_array( $report_frequency, array( 'weekly', 'monthly' ), true ) ? $report_frequency : '';
+		update_option( self::OPTION_REPORT_FREQUENCY, $report_frequency );
+
+		if ( class_exists( 'BGCP_Report' ) ) {
+			BGCP_Report::reschedule();
+		}
 
 		wp_safe_redirect( add_query_arg( 'updated', '1', admin_url( 'edit.php?post_type=product&page=bgcp-settings' ) ) );
 		exit;

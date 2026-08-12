@@ -147,6 +147,18 @@ class BGCP_DB {
 	}
 
 	/**
+	 * All cards created on or after $since (mysql datetime) — used for the
+	 * weekly/monthly sales report, not paginated since report windows are
+	 * small relative to the full table.
+	 */
+	public static function get_cards_since( $since ) {
+		global $wpdb;
+		$table = self::table_name();
+
+		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE created_at >= %s ORDER BY created_at ASC", $since ) );
+	}
+
+	/**
 	 * Adjust balance by a delta (negative to redeem, positive to refund/top up).
 	 * Returns the new balance, or WP_Error if it would go negative or the card is unusable.
 	 *

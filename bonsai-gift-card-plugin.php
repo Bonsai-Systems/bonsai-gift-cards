@@ -42,6 +42,7 @@ function bgcp_init() {
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-admin.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-rest.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-stripe.php';
+	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-report.php';
 
 	BGCP_Settings::init();
 	BGCP_Product::init();
@@ -51,6 +52,11 @@ function bgcp_init() {
 	BGCP_Admin::instance();
 	BGCP_REST::init();
 	BGCP_Stripe::init();
+	BGCP_Report::init();
+
+	// Self-heals the cron schedule if the stored event was ever cleared
+	// (site migration, cron table wiped) without needing a settings re-save.
+	add_action( 'admin_init', array( 'BGCP_Report', 'reschedule' ) );
 
 	add_filter( 'woocommerce_email_classes', 'bgcp_register_email_class' );
 }
@@ -75,6 +81,12 @@ register_activation_hook( __FILE__, 'bgcp_activate' );
 function bgcp_activate() {
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-db.php';
 	BGCP_DB::create_table();
+}
+
+register_deactivation_hook( __FILE__, 'bgcp_deactivate' );
+
+function bgcp_deactivate() {
+	wp_clear_scheduled_hook( 'bgcp_send_sales_report' );
 }
 
 add_action(

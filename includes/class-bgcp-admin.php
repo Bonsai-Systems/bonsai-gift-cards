@@ -130,7 +130,7 @@ class BGCP_Admin {
 								<td><?php echo esc_html( ucfirst( $card->status ) ); ?></td>
 								<td><?php echo $card->expires_at ? esc_html( date_i18n( 'j M Y', strtotime( $card->expires_at ) ) ) : esc_html__( 'Never', 'bgcp' ); ?></td>
 								<td><?php echo $card->order_id ? esc_html( '#' . $card->order_id ) : '—'; ?></td>
-								<td><?php echo esc_html( $this->payment_method_label( $card ) ); ?></td>
+								<td><?php echo esc_html( self::payment_method_label( $card ) ); ?></td>
 								<td>
 									<?php if ( 'active' === $card->status && $card->balance > 0 ) : ?>
 										<a href="#" class="bgcp-toggle-redeem" data-code="<?php echo esc_attr( $card->code ); ?>"><?php esc_html_e( 'Redeem', 'bgcp' ); ?></a> |
@@ -187,7 +187,7 @@ class BGCP_Admin {
 	 * method title (e.g. "Credit Card (Stripe)") so the two ways a card
 	 * gets funded are distinguishable at a glance.
 	 */
-	private function payment_method_label( $card ) {
+	public static function payment_method_label( $card ) {
 		if ( ! $card->order_id ) {
 			return __( 'Cash (manual)', 'bgcp' );
 		}
