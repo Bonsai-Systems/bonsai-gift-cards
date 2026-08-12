@@ -4,20 +4,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Weekly/monthly gift card sales report — a CSV of every card created in
- * the period, emailed to the address set on the Gift Card Settings page.
- * Driven by WP-Cron; if the site's cron is disabled/offloaded, the
- * scheduled event still needs firing by whatever real cron runner is in
- * use (see README), same caveat as the scheduled gift card delivery in
- * BGCP_Order.
+ * Weekly and/or monthly gift card sales report — a CSV of every card
+ * created in the period, emailed to every address set on the Gift Card
+ * Settings page. Weekly and monthly run as independent cron hooks so both
+ * can be enabled at once. Driven by WP-Cron; if the site's cron is
+ * disabled/offloaded, the scheduled events still need firing by whatever
+ * real cron runner is in use (see README), same caveat as the scheduled
+ * gift card delivery in BGCP_Order.
  */
 class BGCP_Report {
 
-	const CRON_HOOK = 'bgcp_send_sales_report';
+	const CRON_HOOK_WEEKLY  = 'bgcp_send_sales_report_weekly';
+	const CRON_HOOK_MONTHLY = 'bgcp_send_sales_report_monthly';
 
 	public static function init() {
 		add_filter( 'cron_schedules', array( __CLASS__, 'register_schedules' ) ); // phpcs:ignore WordPress.WP.CronInterval.CronSchedulesInterval
-		add_action( self::CRON_HOOK, array( __CLASS__, 'send_report' ) );
+		add_action( self::CRON_HOOK_WEEKLY, array( __CLASS__, 'send_weekly_report' ) );
+		add_action( self::CRON_HOOK_MONTHLY, array( __CLASS__, 'send_monthly_report' ) );
 	}
 
 	public static function register_schedules( $schedules ) {
@@ -33,42 +36,47 @@ class BGCP_Report {
 	}
 
 	/**
-	 * Brings the scheduled cron event in line with current settings.
+	 * Brings both scheduled cron events in line with current settings.
 	 * Called after Settings are saved; also safe to call any time.
 	 */
 	public static function reschedule() {
-		$frequency = BGCP_Settings::get_report_frequency();
-		$email     = BGCP_Settings::get_report_email();
-		$current   = wp_get_schedule( self::CRON_HOOK );
+		$emails      = BGCP_Settings::get_report_emails();
+		$frequencies = BGCP_Settings::get_report_frequencies();
 
-		if ( ! $frequency || ! is_email( $email ) ) {
-			if ( $current ) {
-				wp_clear_scheduled_hook( self::CRON_HOOK );
-			}
-			return;
-		}
+		self::sync_schedule( self::CRON_HOOK_WEEKLY, 'bgcp_weekly', in_array( 'weekly', $frequencies, true ) && ! empty( $emails ) );
+		self::sync_schedule( self::CRON_HOOK_MONTHLY, 'bgcp_monthly', in_array( 'monthly', $frequencies, true ) && ! empty( $emails ) );
+	}
 
-		$target = 'bgcp_' . $frequency;
+	private static function sync_schedule( $hook, $recurrence, $should_be_scheduled ) {
+		$is_scheduled = false !== wp_next_scheduled( $hook );
 
-		if ( $current !== $target ) {
-			wp_clear_scheduled_hook( self::CRON_HOOK );
-			wp_schedule_event( time(), $target, self::CRON_HOOK );
+		if ( $should_be_scheduled && ! $is_scheduled ) {
+			wp_schedule_event( time(), $recurrence, $hook );
+		} elseif ( ! $should_be_scheduled && $is_scheduled ) {
+			wp_clear_scheduled_hook( $hook );
 		}
 	}
 
-	public static function send_report() {
-		$email = BGCP_Settings::get_report_email();
-		if ( ! is_email( $email ) ) {
+	public static function send_weekly_report() {
+		self::send_report( 'weekly' );
+	}
+
+	public static function send_monthly_report() {
+		self::send_report( 'monthly' );
+	}
+
+	private static function send_report( $frequency ) {
+		$emails = BGCP_Settings::get_report_emails();
+		if ( empty( $emails ) ) {
 			return;
 		}
 
-		$frequency = BGCP_Settings::get_report_frequency();
-		$days      = 'monthly' === $frequency ? 30 : 7;
-		$since     = gmdate( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
+		$days  = 'monthly' === $frequency ? 30 : 7;
+		$since = gmdate( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
 
-		$cards   = BGCP_DB::get_cards_since( $since );
-		$totals  = self::calculate_totals( $cards );
-		$file    = self::build_csv( $cards, $totals );
+		$cards  = BGCP_DB::get_cards_since( $since );
+		$totals = self::calculate_totals( $cards );
+		$file   = self::build_csv( $cards, $totals );
 
 		if ( ! $file ) {
 			error_log( 'BGCP: could not build gift card sales report CSV' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
@@ -89,10 +97,10 @@ class BGCP_Report {
 			wp_strip_all_tags( wc_price( $totals['redeemed'] ) )
 		);
 
-		$sent = wp_mail( $email, $subject, $body, array(), array( $file ) );
+		$sent = wp_mail( $emails, $subject, $body, array(), array( $file ) );
 
 		if ( ! $sent ) {
-			error_log( 'BGCP: failed to send gift card sales report to ' . $email ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
+			error_log( 'BGCP: failed to send gift card sales report to ' . implode( ', ', $emails ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 		}
 
 		wp_delete_file( $file );

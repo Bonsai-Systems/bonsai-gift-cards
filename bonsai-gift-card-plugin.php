@@ -86,7 +86,8 @@ function bgcp_activate() {
 register_deactivation_hook( __FILE__, 'bgcp_deactivate' );
 
 function bgcp_deactivate() {
-	wp_clear_scheduled_hook( 'bgcp_send_sales_report' );
+	wp_clear_scheduled_hook( 'bgcp_send_sales_report_weekly' );
+	wp_clear_scheduled_hook( 'bgcp_send_sales_report_monthly' );
 }
 
 add_action(
