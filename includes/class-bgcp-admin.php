@@ -113,12 +113,13 @@ class BGCP_Admin {
 						<th><?php esc_html_e( 'Status', 'bgcp' ); ?></th>
 						<th><?php esc_html_e( 'Expires', 'bgcp' ); ?></th>
 						<th><?php esc_html_e( 'Order', 'bgcp' ); ?></th>
+						<th><?php esc_html_e( 'Paid via', 'bgcp' ); ?></th>
 						<th><?php esc_html_e( 'Actions', 'bgcp' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php if ( empty( $cards ) ) : ?>
-						<tr><td colspan="8"><?php esc_html_e( 'No gift cards found.', 'bgcp' ); ?></td></tr>
+						<tr><td colspan="9"><?php esc_html_e( 'No gift cards found.', 'bgcp' ); ?></td></tr>
 					<?php else : ?>
 						<?php foreach ( $cards as $card ) : ?>
 							<tr>
@@ -129,6 +130,7 @@ class BGCP_Admin {
 								<td><?php echo esc_html( ucfirst( $card->status ) ); ?></td>
 								<td><?php echo $card->expires_at ? esc_html( date_i18n( 'j M Y', strtotime( $card->expires_at ) ) ) : esc_html__( 'Never', 'bgcp' ); ?></td>
 								<td><?php echo $card->order_id ? esc_html( '#' . $card->order_id ) : '—'; ?></td>
+								<td><?php echo esc_html( $this->payment_method_label( $card ) ); ?></td>
 								<td>
 									<?php if ( 'active' === $card->status && $card->balance > 0 ) : ?>
 										<a href="#" class="bgcp-toggle-redeem" data-code="<?php echo esc_attr( $card->code ); ?>"><?php esc_html_e( 'Redeem', 'bgcp' ); ?></a> |
@@ -143,7 +145,7 @@ class BGCP_Admin {
 							</tr>
 							<?php if ( 'active' === $card->status && $card->balance > 0 ) : ?>
 								<tr class="bgcp-redeem-row" data-code="<?php echo esc_attr( $card->code ); ?>" style="display:none;">
-									<td colspan="8">
+									<td colspan="9">
 										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 											<?php wp_nonce_field( 'bgcp_redeem_card_' . $card->code ); ?>
 											<input type="hidden" name="action" value="bgcp_redeem_card" />
@@ -158,7 +160,7 @@ class BGCP_Admin {
 								</tr>
 							<?php endif; ?>
 							<tr class="bgcp-edit-row" data-code="<?php echo esc_attr( $card->code ); ?>" style="display:none;">
-								<td colspan="8">
+								<td colspan="9">
 									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 										<?php wp_nonce_field( 'bgcp_edit_balance_' . $card->code ); ?>
 										<input type="hidden" name="action" value="bgcp_edit_balance" />
@@ -177,6 +179,27 @@ class BGCP_Admin {
 			</table>
 		</div>
 		<?php
+	}
+
+	/**
+	 * "Cash" for manually-created cards (no order — phone/in-person sale,
+	 * see handle_manual_create()); otherwise the order's actual payment
+	 * method title (e.g. "Credit Card (Stripe)") so the two ways a card
+	 * gets funded are distinguishable at a glance.
+	 */
+	private function payment_method_label( $card ) {
+		if ( ! $card->order_id ) {
+			return __( 'Cash (manual)', 'bgcp' );
+		}
+
+		$order = wc_get_order( $card->order_id );
+		if ( ! $order ) {
+			return __( 'Unknown', 'bgcp' );
+		}
+
+		$title = $order->get_payment_method_title();
+
+		return $title ? $title : __( 'Unknown', 'bgcp' );
 	}
 
 	private function status_action_url( $code, $status ) {
