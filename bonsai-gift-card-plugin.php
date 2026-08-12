@@ -41,6 +41,7 @@ function bgcp_init() {
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-shortcode.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-admin.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-rest.php';
+	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-stripe.php';
 
 	BGCP_Settings::init();
 	BGCP_Product::init();
@@ -49,6 +50,7 @@ function bgcp_init() {
 	BGCP_Shortcode::init();
 	BGCP_Admin::instance();
 	BGCP_REST::init();
+	BGCP_Stripe::init();
 
 	add_filter( 'woocommerce_email_classes', 'bgcp_register_email_class' );
 }
