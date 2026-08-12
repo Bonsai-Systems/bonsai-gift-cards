@@ -56,14 +56,14 @@ defined( 'ABSPATH' ) || exit;
 
 	<p class="form-row form-row-wide">
 		<label for="bgcp_recipient_name"><?php esc_html_e( 'Who is this gift card for? (their name)', 'bgcp' ); ?></label>
-		<input type="text" name="bgcp_recipient_name" id="bgcp_recipient_name" />
-		<span class="description"><?php esc_html_e( 'We\'ll use this to greet them in the gift card email, e.g. "Hi Jane,"', 'bgcp' ); ?></span>
+		<input type="text" name="bgcp_recipient_name" id="bgcp_recipient_name" style="width:100%;" />
+		<span class="description" style="display:block;"><?php esc_html_e( 'We\'ll use this to greet them in the gift card email, e.g. "Hi Jane,"', 'bgcp' ); ?></span>
 	</p>
 
 	<p class="form-row form-row-wide">
 		<label for="bgcp_recipient_email"><?php esc_html_e( 'Their email address', 'bgcp' ); ?></label>
-		<input type="email" name="bgcp_recipient_email" id="bgcp_recipient_email" />
-		<span class="description"><?php echo wp_kses_post( __( "We'll email the gift card straight to this address so they can use it themselves.<br/>Buying it for yourself, or want to send it on separately? Just leave this blank and we'll email it to you instead.", 'bgcp' ) ); ?></span>
+		<input type="email" name="bgcp_recipient_email" id="bgcp_recipient_email" style="width:100%;" />
+		<span class="description" style="display:block;"><?php echo wp_kses_post( __( "We'll email the gift card straight to this address so they can use it themselves.<br/>Buying it for yourself, or want to send it on separately? Just leave this blank and we'll email it to you instead.", 'bgcp' ) ); ?></span>
 	</p>
 
 	<p class="form-row form-row-wide">
