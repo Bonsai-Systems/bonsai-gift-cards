@@ -56,6 +56,7 @@ class BGCP_Admin {
 	public function render_page() {
 		$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 		$cards  = BGCP_DB::get_cards( array( 'search' => $search, 'limit' => 100 ) );
+		$view   = isset( $_GET['bgcp_view'] ) && 'create' === $_GET['bgcp_view'] ? 'create' : 'existing';
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Gift Card Codes', 'bgcp' ); ?></h1>
@@ -64,44 +65,76 @@ class BGCP_Admin {
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Balance updated.', 'bgcp' ); ?></p></div>
 			<?php elseif ( isset( $_GET['bgcp_notice'] ) && 'redeemed' === $_GET['bgcp_notice'] ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Gift card redeemed.', 'bgcp' ); ?></p></div>
+			<?php elseif ( isset( $_GET['bgcp_notice'] ) && 'created' === $_GET['bgcp_notice'] ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Gift card created.', 'bgcp' ); ?></p></div>
 			<?php endif; ?>
 			<?php if ( isset( $_GET['bgcp_error'] ) ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['bgcp_error'] ) ) ); ?></p></div>
 			<?php endif; ?>
 
-			<h2><?php esc_html_e( 'Create a card manually', 'bgcp' ); ?></h2>
-			<p class="description"><?php esc_html_e( 'For phone orders or in-person sales that skip checkout.', 'bgcp' ); ?></p>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-bottom:2em;">
-				<?php wp_nonce_field( 'bgcp_manual_create' ); ?>
-				<input type="hidden" name="action" value="bgcp_manual_create" />
-				<table class="form-table">
-					<tr>
-						<th><label for="bgcp_amount"><?php esc_html_e( 'Amount (£)', 'bgcp' ); ?></label></th>
-						<td><input type="number" step="0.01" min="1" max="1000" name="amount" id="bgcp_amount" required /></td>
-					</tr>
-					<tr>
-						<th><label for="bgcp_recipient_email"><?php esc_html_e( 'Recipient email', 'bgcp' ); ?></label></th>
-						<td><input type="email" name="recipient_email" id="bgcp_recipient_email" required /></td>
-					</tr>
-					<tr>
-						<th><label for="bgcp_recipient_name"><?php esc_html_e( 'Recipient name', 'bgcp' ); ?></label></th>
-						<td><input type="text" name="recipient_name" id="bgcp_recipient_name" /></td>
-					</tr>
-					<tr>
-						<th><label for="bgcp_send_email"><?php esc_html_e( 'Send email now?', 'bgcp' ); ?></label></th>
-						<td><input type="checkbox" name="send_email" id="bgcp_send_email" value="yes" checked /></td>
-					</tr>
-				</table>
-				<?php submit_button( __( 'Create Gift Card', 'bgcp' ) ); ?>
-			</form>
+			<h2 class="nav-tab-wrapper">
+				<a href="<?php echo esc_url( remove_query_arg( 'bgcp_view' ) ); ?>" class="nav-tab <?php echo 'existing' === $view ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Existing cards', 'bgcp' ); ?></a>
+				<a href="<?php echo esc_url( add_query_arg( 'bgcp_view', 'create' ) ); ?>" class="nav-tab <?php echo 'create' === $view ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Create a card manually', 'bgcp' ); ?></a>
+			</h2>
 
-			<h2><?php esc_html_e( 'Existing cards', 'bgcp' ); ?></h2>
-			<form method="get" style="margin-bottom:1em;">
-				<input type="hidden" name="post_type" value="product" />
-				<input type="hidden" name="page" value="bgcp-cards" />
-				<input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Search code or email…', 'bgcp' ); ?>" />
-				<?php submit_button( __( 'Search', 'bgcp' ), '', '', false ); ?>
-			</form>
+			<?php if ( 'create' === $view ) : ?>
+
+				<div class="notice notice-info inline" style="margin:1em 0;">
+					<p>
+						<strong><?php esc_html_e( 'When to use this:', 'bgcp' ); ?></strong>
+						<?php esc_html_e( "Use this form when someone wants a gift card without going through the website checkout — a phone order, or a customer paying in person with cash or card.", 'bgcp' ); ?>
+					</p>
+					<p>
+						<?php esc_html_e( "1. Enter the amount to load onto the card and who it's for.", 'bgcp' ); ?><br />
+						<?php esc_html_e( '2. Tick "Send email now" to email the card straight to them, or untick it if you\'d rather hand over the code yourself (e.g. printed or written down).', 'bgcp' ); ?><br />
+						<?php esc_html_e( '3. Click "Create Gift Card". The new code will appear on the Existing Cards tab.', 'bgcp' ); ?>
+					</p>
+				</div>
+
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-bottom:2em;">
+					<?php wp_nonce_field( 'bgcp_manual_create' ); ?>
+					<input type="hidden" name="action" value="bgcp_manual_create" />
+					<table class="form-table">
+						<tr>
+							<th><label for="bgcp_amount"><?php esc_html_e( 'Amount (£)', 'bgcp' ); ?></label></th>
+							<td><input type="number" step="0.01" min="1" max="1000" name="amount" id="bgcp_amount" required /></td>
+						</tr>
+						<tr>
+							<th><label for="bgcp_recipient_email"><?php esc_html_e( 'Recipient email', 'bgcp' ); ?></label></th>
+							<td><input type="email" name="recipient_email" id="bgcp_recipient_email" required /></td>
+						</tr>
+						<tr>
+							<th><label for="bgcp_recipient_name"><?php esc_html_e( 'Recipient name', 'bgcp' ); ?></label></th>
+							<td><input type="text" name="recipient_name" id="bgcp_recipient_name" /></td>
+						</tr>
+						<tr>
+							<th><label for="bgcp_send_email"><?php esc_html_e( 'Send email now?', 'bgcp' ); ?></label></th>
+							<td><input type="checkbox" name="send_email" id="bgcp_send_email" value="yes" checked /></td>
+						</tr>
+					</table>
+					<?php submit_button( __( 'Create Gift Card', 'bgcp' ) ); ?>
+				</form>
+
+			<?php else : ?>
+
+				<div class="notice notice-info inline" style="margin:1em 0;">
+					<p><strong><?php esc_html_e( 'Quick guide:', 'bgcp' ); ?></strong></p>
+					<p>
+						<?php esc_html_e( 'Search by code or customer email using the box below.', 'bgcp' ); ?>
+					</p>
+					<p>
+						<strong><?php esc_html_e( 'Redeem', 'bgcp' ); ?></strong> — <?php esc_html_e( 'a customer is spending some or all of the card in person or over the phone (not through the website checkout). Click Redeem, enter how much they\'re spending, and it comes off the balance.', 'bgcp' ); ?><br />
+						<strong><?php esc_html_e( 'Edit', 'bgcp' ); ?></strong> — <?php esc_html_e( "the balance was entered wrong and needs correcting. Click Edit and type in the correct balance — this overwrites it directly, it doesn't add or subtract.", 'bgcp' ); ?><br />
+						<strong><?php esc_html_e( 'Disable / Re-enable', 'bgcp' ); ?></strong> — <?php esc_html_e( 'Disable stops a card being used at all, e.g. if it\'s reported lost or fraudulent. Re-enable brings it back into use.', 'bgcp' ); ?>
+					</p>
+				</div>
+
+				<form method="get" style="margin-bottom:1em;">
+					<input type="hidden" name="post_type" value="product" />
+					<input type="hidden" name="page" value="bgcp-cards" />
+					<input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Search code or email…', 'bgcp' ); ?>" />
+					<?php submit_button( __( 'Search', 'bgcp' ), '', '', false ); ?>
+				</form>
 
 			<table class="wp-list-table widefat fixed striped">
 				<thead>
@@ -177,6 +210,9 @@ class BGCP_Admin {
 					<?php endif; ?>
 				</tbody>
 			</table>
+
+			<?php endif; ?>
+
 		</div>
 		<?php
 	}
@@ -240,13 +276,26 @@ class BGCP_Admin {
 				)
 			);
 
-			if ( ! is_wp_error( $code ) && $send_email ) {
-				$card = BGCP_DB::get_card_by_code( $code );
-				do_action( 'bgcp_send_gift_card_email', $card );
+			if ( is_wp_error( $code ) ) {
+				$args = array(
+					'bgcp_error' => rawurlencode( $code->get_error_message() ),
+					'bgcp_view'  => 'create',
+				);
+			} else {
+				if ( $send_email ) {
+					$card = BGCP_DB::get_card_by_code( $code );
+					do_action( 'bgcp_send_gift_card_email', $card );
+				}
+				$args = array( 'bgcp_notice' => 'created' );
 			}
+		} else {
+			$args = array(
+				'bgcp_error' => rawurlencode( __( 'Enter a valid amount (£1–£1000) and recipient email.', 'bgcp' ) ),
+				'bgcp_view'  => 'create',
+			);
 		}
 
-		wp_safe_redirect( admin_url( 'edit.php?post_type=product&page=bgcp-cards' ) );
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'edit.php?post_type=product&page=bgcp-cards' ) ) );
 		exit;
 	}
 
