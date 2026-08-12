@@ -195,6 +195,43 @@ class BGCP_DB {
 		return (float) $card->balance;
 	}
 
+	/**
+	 * Directly set a card's balance, bypassing the delta-only adjust_balance()
+	 * checks (status/expiry) — for admin corrections of a mistaken amount,
+	 * not for redemptions. Use adjust_balance() for anything redemption-like.
+	 */
+	public static function set_balance( $code, $new_balance ) {
+		global $wpdb;
+		$table = self::table_name();
+		$card  = self::get_card_by_code( $code );
+
+		if ( ! $card ) {
+			return new WP_Error( 'bgcp_not_found', __( 'Gift card not found.', 'bgcp' ) );
+		}
+
+		$new_balance = round( max( 0, (float) $new_balance ), 2 );
+
+		$updated = $wpdb->update(
+			$table,
+			array(
+				'balance'    => $new_balance,
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => $card->id ),
+			array( '%f', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $updated ) {
+			error_log( 'BGCP: failed to update gift card balance — ' . $wpdb->last_error ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
+			return new WP_Error( 'bgcp_db_error', __( 'Could not update balance.', 'bgcp' ) );
+		}
+
+		do_action( 'bgcp_balance_adjusted', $card->id, $new_balance - (float) $card->balance, $new_balance, 'manual balance edit' );
+
+		return $new_balance;
+	}
+
 	public static function set_status( $code, $status ) {
 		global $wpdb;
 		$table = self::table_name();

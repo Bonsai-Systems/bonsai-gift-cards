@@ -42,4 +42,14 @@ jQuery( function ( $ ) {
 			e.preventDefault();
 		}
 	} );
+
+	$( document ).on( 'click', '.bgcp-toggle-edit', function ( e ) {
+		e.preventDefault();
+		$( '.bgcp-edit-row[data-code="' + $( this ).data( 'code' ) + '"]' ).toggle();
+	} );
+
+	$( document ).on( 'click', '.bgcp-toggle-redeem', function ( e ) {
+		e.preventDefault();
+		$( '.bgcp-redeem-row[data-code="' + $( this ).data( 'code' ) + '"]' ).toggle();
+	} );
 } );

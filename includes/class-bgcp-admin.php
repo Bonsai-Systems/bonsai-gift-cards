@@ -23,6 +23,8 @@ class BGCP_Admin {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_post_bgcp_manual_create', array( $this, 'handle_manual_create' ) );
 		add_action( 'admin_post_bgcp_adjust_status', array( $this, 'handle_adjust_status' ) );
+		add_action( 'admin_post_bgcp_edit_balance', array( $this, 'handle_edit_balance' ) );
+		add_action( 'admin_post_bgcp_redeem_card', array( $this, 'handle_redeem_card' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 	}
 
@@ -57,6 +59,15 @@ class BGCP_Admin {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Gift Card Codes', 'bgcp' ); ?></h1>
+
+			<?php if ( isset( $_GET['bgcp_notice'] ) && 'balance_updated' === $_GET['bgcp_notice'] ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Balance updated.', 'bgcp' ); ?></p></div>
+			<?php elseif ( isset( $_GET['bgcp_notice'] ) && 'redeemed' === $_GET['bgcp_notice'] ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Gift card redeemed.', 'bgcp' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['bgcp_error'] ) ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['bgcp_error'] ) ) ); ?></p></div>
+			<?php endif; ?>
 
 			<h2><?php esc_html_e( 'Create a card manually', 'bgcp' ); ?></h2>
 			<p class="description"><?php esc_html_e( 'For phone orders or in-person sales that skip checkout.', 'bgcp' ); ?></p>
@@ -119,11 +130,45 @@ class BGCP_Admin {
 								<td><?php echo $card->expires_at ? esc_html( date_i18n( 'j M Y', strtotime( $card->expires_at ) ) ) : esc_html__( 'Never', 'bgcp' ); ?></td>
 								<td><?php echo $card->order_id ? esc_html( '#' . $card->order_id ) : '—'; ?></td>
 								<td>
+									<?php if ( 'active' === $card->status && $card->balance > 0 ) : ?>
+										<a href="#" class="bgcp-toggle-redeem" data-code="<?php echo esc_attr( $card->code ); ?>"><?php esc_html_e( 'Redeem', 'bgcp' ); ?></a> |
+									<?php endif; ?>
+									<a href="#" class="bgcp-toggle-edit" data-code="<?php echo esc_attr( $card->code ); ?>"><?php esc_html_e( 'Edit', 'bgcp' ); ?></a> |
 									<?php if ( 'active' === $card->status ) : ?>
 										<a href="<?php echo esc_url( $this->status_action_url( $card->code, 'disabled' ) ); ?>" class="bgcp-confirm-disable"><?php esc_html_e( 'Disable', 'bgcp' ); ?></a>
 									<?php else : ?>
 										<a href="<?php echo esc_url( $this->status_action_url( $card->code, 'active' ) ); ?>"><?php esc_html_e( 'Re-enable', 'bgcp' ); ?></a>
 									<?php endif; ?>
+								</td>
+							</tr>
+							<?php if ( 'active' === $card->status && $card->balance > 0 ) : ?>
+								<tr class="bgcp-redeem-row" data-code="<?php echo esc_attr( $card->code ); ?>" style="display:none;">
+									<td colspan="8">
+										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+											<?php wp_nonce_field( 'bgcp_redeem_card_' . $card->code ); ?>
+											<input type="hidden" name="action" value="bgcp_redeem_card" />
+											<input type="hidden" name="code" value="<?php echo esc_attr( $card->code ); ?>" />
+											<label>
+												<?php esc_html_e( 'Amount to redeem (£)', 'bgcp' ); ?>
+												<input type="number" step="0.01" min="0.01" max="<?php echo esc_attr( $card->balance ); ?>" name="redeem_amount" required />
+											</label>
+											<?php submit_button( __( 'Redeem', 'bgcp' ), 'secondary small', '', false ); ?>
+										</form>
+									</td>
+								</tr>
+							<?php endif; ?>
+							<tr class="bgcp-edit-row" data-code="<?php echo esc_attr( $card->code ); ?>" style="display:none;">
+								<td colspan="8">
+									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+										<?php wp_nonce_field( 'bgcp_edit_balance_' . $card->code ); ?>
+										<input type="hidden" name="action" value="bgcp_edit_balance" />
+										<input type="hidden" name="code" value="<?php echo esc_attr( $card->code ); ?>" />
+										<label>
+											<?php esc_html_e( 'New balance (£)', 'bgcp' ); ?>
+											<input type="number" step="0.01" min="0" name="balance" value="<?php echo esc_attr( $card->balance ); ?>" required />
+										</label>
+										<?php submit_button( __( 'Save balance', 'bgcp' ), 'secondary small', '', false ); ?>
+									</form>
 								</td>
 							</tr>
 						<?php endforeach; ?>
@@ -197,6 +242,54 @@ class BGCP_Admin {
 		}
 
 		wp_safe_redirect( admin_url( 'edit.php?post_type=product&page=bgcp-cards' ) );
+		exit;
+	}
+
+	public function handle_edit_balance() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'bgcp' ) );
+		}
+
+		$code = isset( $_POST['code'] ) ? sanitize_text_field( wp_unslash( $_POST['code'] ) ) : '';
+
+		check_admin_referer( 'bgcp_edit_balance_' . $code );
+
+		$balance = isset( $_POST['balance'] ) ? wc_format_decimal( wp_unslash( $_POST['balance'] ) ) : null;
+
+		if ( $code && null !== $balance && '' !== $balance && (float) $balance >= 0 ) {
+			$result = BGCP_DB::set_balance( $code, $balance );
+			$args   = is_wp_error( $result )
+				? array( 'bgcp_error' => rawurlencode( $result->get_error_message() ) )
+				: array( 'bgcp_notice' => 'balance_updated' );
+		} else {
+			$args = array( 'bgcp_error' => rawurlencode( __( 'Enter a valid balance.', 'bgcp' ) ) );
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'edit.php?post_type=product&page=bgcp-cards' ) ) );
+		exit;
+	}
+
+	public function handle_redeem_card() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'bgcp' ) );
+		}
+
+		$code = isset( $_POST['code'] ) ? sanitize_text_field( wp_unslash( $_POST['code'] ) ) : '';
+
+		check_admin_referer( 'bgcp_redeem_card_' . $code );
+
+		$amount = isset( $_POST['redeem_amount'] ) ? wc_format_decimal( wp_unslash( $_POST['redeem_amount'] ) ) : 0;
+
+		if ( $code && $amount > 0 ) {
+			$result = BGCP_DB::adjust_balance( $code, -$amount, 'manual in-person/phone redemption' );
+			$args   = is_wp_error( $result )
+				? array( 'bgcp_error' => rawurlencode( $result->get_error_message() ) )
+				: array( 'bgcp_notice' => 'redeemed' );
+		} else {
+			$args = array( 'bgcp_error' => rawurlencode( __( 'Enter a valid redemption amount.', 'bgcp' ) ) );
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'edit.php?post_type=product&page=bgcp-cards' ) ) );
 		exit;
 	}
 }
