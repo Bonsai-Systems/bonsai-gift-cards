@@ -66,8 +66,9 @@ class BGCP_Report {
 		$days      = 'monthly' === $frequency ? 30 : 7;
 		$since     = gmdate( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
 
-		$cards = BGCP_DB::get_cards_since( $since );
-		$file  = self::build_csv( $cards );
+		$cards   = BGCP_DB::get_cards_since( $since );
+		$totals  = self::calculate_totals( $cards );
+		$file    = self::build_csv( $cards, $totals );
 
 		if ( ! $file ) {
 			error_log( 'BGCP: could not build gift card sales report CSV' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
@@ -80,10 +81,12 @@ class BGCP_Report {
 			get_bloginfo( 'name' )
 		);
 		$body    = sprintf(
-			/* translators: 1: number of gift cards, 2: number of days covered */
-			__( '%1$d gift card(s) created in the last %2$d days. CSV attached.', 'bgcp' ),
+			/* translators: 1: number of gift cards, 2: number of days covered, 3: total sold, 4: total redeemed */
+			__( "%1\$d gift card(s) created in the last %2\$d days.\nTotal sold: %3\$s\nRedeemed so far (from those cards): %4\$s\nCSV attached.", 'bgcp' ),
 			count( $cards ),
-			$days
+			$days,
+			wp_strip_all_tags( wc_price( $totals['sold'] ) ),
+			wp_strip_all_tags( wc_price( $totals['redeemed'] ) )
 		);
 
 		$sent = wp_mail( $email, $subject, $body, array(), array( $file ) );
@@ -95,7 +98,27 @@ class BGCP_Report {
 		wp_delete_file( $file );
 	}
 
-	private static function build_csv( array $cards ) {
+	/**
+	 * Sold/redeemed against only the cards created in this report's window
+	 * — not all redemption activity site-wide in that window, since a
+	 * redemption timestamp isn't tracked separately from the card itself.
+	 */
+	private static function calculate_totals( array $cards ) {
+		$sold     = 0.0;
+		$redeemed = 0.0;
+
+		foreach ( $cards as $card ) {
+			$sold     += (float) $card->initial_amount;
+			$redeemed += (float) $card->initial_amount - (float) $card->balance;
+		}
+
+		return array(
+			'sold'     => round( $sold, 2 ),
+			'redeemed' => round( $redeemed, 2 ),
+		);
+	}
+
+	private static function build_csv( array $cards, array $totals ) {
 		$file = wp_tempnam( 'bgcp-sales-report' );
 		if ( ! $file ) {
 			return false;
@@ -105,6 +128,11 @@ class BGCP_Report {
 		if ( ! $handle ) {
 			return false;
 		}
+
+		fputcsv( $handle, array( __( 'Total sold', 'bgcp' ), $totals['sold'] ) );
+		fputcsv( $handle, array( __( 'Total redeemed', 'bgcp' ), $totals['redeemed'] ) );
+		fputcsv( $handle, array( __( 'Outstanding balance', 'bgcp' ), round( $totals['sold'] - $totals['redeemed'], 2 ) ) );
+		fputcsv( $handle, array() );
 
 		fputcsv(
 			$handle,
