@@ -29,7 +29,7 @@ require_once BGCP_PLUGIN_DIR . 'vendor/autoload.php';
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $bgcp_update_checker = PucFactory::buildUpdateChecker(
-	'https://github.com/gakdesign/bonsai-gift-cards',
+	'https://github.com/Bonsai-Systems/bonsai-gift-cards',
 	__FILE__,
 	'bonsai-gift-cards',
 	6
