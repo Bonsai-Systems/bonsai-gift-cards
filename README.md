@@ -3,6 +3,25 @@
 Custom WooCommerce gift card plugin. Built as a standalone plugin (not
 theme-coupled) so it's portable to other Bonsai client sites later.
 
+## Updates
+
+This plugin self-updates via [plugin-update-checker](https://github.com/YahnisElsts/plugin-update-checker),
+the same mechanism used by `bonsai-code-injector` — no WordPress.org listing, no
+manual re-upload per client site. It polls the `main` branch of
+[gakdesign/bonsai-gift-cards](https://github.com/gakdesign/bonsai-gift-cards) and
+surfaces new releases in the normal wp-admin "Update available" notice.
+
+**Cutting a release:**
+1. Bump `Version:` in `bonsai-gift-card-plugin.php` (plugin header **and** the
+   `BGCP_VERSION` constant — both must match) and add a dated entry to
+   `CHANGELOG.md`.
+2. Merge to `main` and tag the release (`vX.Y.Z`) on GitHub — the update checker
+   reads GitHub releases, not raw commits.
+3. `vendor/` is committed to this repo on purpose (see `.gitignore`) — the plugin
+   ships the update-checker library itself, so client sites never need to run
+   Composer. If you add/update a Composer dependency, run `composer update` and
+   commit the resulting `vendor/` and `composer.lock` changes together.
+
 ## Setup
 
 1. Upload/activate as a normal plugin (needs WooCommerce active).

@@ -3,7 +3,35 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-07-28
+## [1.1.0] - 2026-08-13
+### Added
+- Self-hosted plugin updates via [plugin-update-checker](https://github.com/YahnisElsts/plugin-update-checker)
+  (Composer, `vendor/` committed — same pattern as `bonsai-code-injector`). The plugin
+  now checks `https://github.com/gakdesign/bonsai-gift-cards` (`main` branch, release
+  assets) for updates and offers them through the normal wp-admin "Update available"
+  flow — no more manual re-upload per client site.
+- Admin gift card page split into tabs, with front-of-house guidance for staff issuing
+  or redeeming cards in person.
+- Weekly/monthly gift card sales report emailed as CSV, with sold/redeemed totals and
+  support for multiple report recipients and a combined weekly+monthly digest.
+- Payment method shown on the gift card codes admin listing.
+- Manual balance edit and in-person redemption from the gift card admin.
+
+### Changed
+- Stripe payment description is now prefixed for gift card orders, so they're
+  identifiable in the Stripe dashboard.
+- Gift card purchase form copy rewritten in plain English; recipient name/email inputs
+  are now full width with their descriptions on their own line.
+
+### Fixed
+- Gift card purchase field no longer relies on the global `$product` before WooCommerce
+  sets it up on singular templates.
+- Gift card email class now loads lazily, avoiding a fatal when `WC_Emails`
+  initialises late.
+- `BGCP_DB` is now required before the activation hook runs, preventing a fatal on
+  plugin activation.
+
+## [1.0.0] - 2026-07-28
 ### Changed
 - Renamed from "Ley Arms Gift Cards" to **Bonsai Gift Card Plugin** — a generic,
   client-portable base rather than a Ley Arms-specific build. Prefix `lagc`/`LAGC` →

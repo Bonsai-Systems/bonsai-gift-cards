@@ -7,8 +7,10 @@ Thumbs.db
 .idea/
 *.sublime-*
 
-# Dependencies (if composer/npm ever added)
-/vendor/
+# Dependencies
+# vendor/ is committed — this is a client-portable, no-build-step plugin;
+# the plugin-update-checker library must ship in the release, same as
+# bonsai-code-injector.
 /node_modules/
 
 # Logs

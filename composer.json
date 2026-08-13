@@ -1,0 +1,6 @@
+{
+    "name": "bonsai-digital-collective/bonsai-gift-cards",
+    "require": {
+        "yahnis-elsts/plugin-update-checker": "^5.6"
+    }
+}
