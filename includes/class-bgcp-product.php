@@ -19,9 +19,31 @@ class BGCP_Product {
 		add_filter( 'woocommerce_get_item_data', array( __CLASS__, 'display_cart_item_data' ), 10, 2 );
 		add_action( 'woocommerce_add_order_item_meta', array( __CLASS__, 'legacy_noop' ) ); // kept for older themes calling this hook name
 		add_filter( 'woocommerce_add_cart_item', array( __CLASS__, 'set_cart_item_price' ), 10, 1 );
+		// Cart items are rebuilt from the WC session on every later page load
+		// (cart, checkout, a fresh visit) — without this, the price above only
+		// survives the single request it was added on and silently reverts to
+		// the product's base price everywhere else.
+		add_filter( 'woocommerce_get_cart_item_from_session', array( __CLASS__, 'set_cart_item_price' ), 10, 1 );
 		add_action( 'woocommerce_checkout_create_order_line_item', array( __CLASS__, 'add_order_item_meta' ), 10, 4 );
 		add_action( 'woocommerce_cart_calculate_fees', array( __CLASS__, 'apply_hard_copy_fee' ) );
 		add_filter( 'woocommerce_order_item_display_meta_key', array( __CLASS__, 'friendly_meta_key' ), 10, 2 );
+		add_filter( 'woocommerce_add_to_cart_redirect', array( __CLASS__, 'redirect_to_checkout' ) );
+	}
+
+	/**
+	 * Gift cards go straight to checkout instead of the cart page — there's
+	 * nothing useful to do on the cart for a single voucher, and it matches
+	 * how gift card purchases work on most sites. Only applies to gift card
+	 * products; every other WooCommerce product keeps its normal behaviour.
+	 */
+	public static function redirect_to_checkout( $url ) {
+		$product_id = isset( $_REQUEST['add-to-cart'] ) ? absint( $_REQUEST['add-to-cart'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification
+
+		if ( $product_id && self::is_gift_card( $product_id ) ) {
+			return wc_get_checkout_url();
+		}
+
+		return $url;
 	}
 
 	public static function legacy_noop() {}

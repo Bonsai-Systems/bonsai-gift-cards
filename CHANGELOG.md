@@ -10,6 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   block (name, address lines, town/city, postcode, country). Address is required
   server-side when the option is ticked, stored on the order line item, and shown in
   the cart/checkout item summary and admin order screen for fulfilment.
+- Gift card products now skip the cart page and go straight to checkout after
+  "Add to Cart" — only affects gift card products, other WooCommerce products are
+  unaffected.
+
+### Fixed
+- Gift card cart price now survives a page reload. It was only being set on the
+  `woocommerce_add_cart_item` hook, which fires once at the moment of adding — on any
+  later page load (cart, checkout, a fresh visit) the cart is rebuilt from the WC
+  session and the item silently reverted to the underlying product's base price,
+  while fees (e.g. the printed card fee) kept calculating correctly. Most visible as
+  the order total showing only the postage fee with no gift card amount. Now also
+  reapplied on `woocommerce_get_cart_item_from_session`.
 
 ## [1.1.0] - 2026-08-13
 ### Added
