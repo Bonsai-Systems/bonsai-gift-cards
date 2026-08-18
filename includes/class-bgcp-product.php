@@ -14,11 +14,14 @@ class BGCP_Product {
 
 		add_action( 'woocommerce_before_add_to_cart_button', array( __CLASS__, 'frontend_fields' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_frontend_assets' ) );
+		add_filter( 'woocommerce_add_to_cart_validation', array( __CLASS__, 'validate_hard_copy_fields' ), 10, 3 );
 		add_filter( 'woocommerce_add_cart_item_data', array( __CLASS__, 'add_cart_item_data' ), 10, 2 );
 		add_filter( 'woocommerce_get_item_data', array( __CLASS__, 'display_cart_item_data' ), 10, 2 );
 		add_action( 'woocommerce_add_order_item_meta', array( __CLASS__, 'legacy_noop' ) ); // kept for older themes calling this hook name
 		add_filter( 'woocommerce_add_cart_item', array( __CLASS__, 'set_cart_item_price' ), 10, 1 );
 		add_action( 'woocommerce_checkout_create_order_line_item', array( __CLASS__, 'add_order_item_meta' ), 10, 4 );
+		add_action( 'woocommerce_cart_calculate_fees', array( __CLASS__, 'apply_hard_copy_fee' ) );
+		add_filter( 'woocommerce_order_item_display_meta_key', array( __CLASS__, 'friendly_meta_key' ), 10, 2 );
 	}
 
 	public static function legacy_noop() {}
@@ -113,9 +116,10 @@ class BGCP_Product {
 		wc_get_template(
 			'gift-card-purchase-fields.php',
 			array(
-				'presets' => $presets,
-				'min'     => $min ?: 5,   // phpcs:ignore
-				'max'     => $max ?: 500, // phpcs:ignore
+				'presets'       => $presets,
+				'min'           => $min ?: 5,   // phpcs:ignore
+				'max'           => $max ?: 500, // phpcs:ignore
+				'hard_copy_fee' => BGCP_Settings::get_hard_copy_fee(),
 			),
 			'',
 			BGCP_PLUGIN_DIR . 'templates/'
@@ -140,6 +144,40 @@ class BGCP_Product {
 		);
 	}
 
+	/**
+	 * Requires a postal address when "send a printed card" is ticked —
+	 * there's a real printing/postage cost tied to it, so unlike the
+	 * (optional) email recipient fields this one has to be enforced
+	 * server-side, not just in the browser.
+	 */
+	public static function validate_hard_copy_fields( $passed, $product_id, $quantity ) {
+		if ( ! self::is_gift_card( $product_id ) ) {
+			return $passed;
+		}
+
+		if ( empty( $_POST['bgcp_hard_copy'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			return $passed;
+		}
+
+		$required = array(
+			'bgcp_ship_name'      => __( 'Recipient name', 'bgcp' ),
+			'bgcp_ship_address_1' => __( 'Address line 1', 'bgcp' ),
+			'bgcp_ship_city'      => __( 'Town / City', 'bgcp' ),
+			'bgcp_ship_postcode'  => __( 'Postcode', 'bgcp' ),
+			'bgcp_ship_country'   => __( 'Country', 'bgcp' ),
+		);
+
+		foreach ( $required as $field => $label ) {
+			if ( empty( $_POST[ $field ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+				/* translators: %s: missing field label, e.g. Postcode */
+				wc_add_notice( sprintf( __( '%s is required to post a printed gift card.', 'bgcp' ), $label ), 'error' );
+				$passed = false;
+			}
+		}
+
+		return $passed;
+	}
+
 	public static function add_cart_item_data( $cart_item_data, $product_id ) {
 		if ( ! self::is_gift_card( $product_id ) ) {
 			return $cart_item_data;
@@ -152,7 +190,18 @@ class BGCP_Product {
 				'recipient_email' => isset( $_POST['bgcp_recipient_email'] ) ? sanitize_email( wp_unslash( $_POST['bgcp_recipient_email'] ) ) : '', // phpcs:ignore
 				'message'         => isset( $_POST['bgcp_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['bgcp_message'] ) ) : '', // phpcs:ignore
 				'delivery_date'   => isset( $_POST['bgcp_delivery_date'] ) ? sanitize_text_field( wp_unslash( $_POST['bgcp_delivery_date'] ) ) : '', // phpcs:ignore
+				'hard_copy'       => ! empty( $_POST['bgcp_hard_copy'] ) ? 'yes' : '', // phpcs:ignore
 			);
+
+			if ( ! empty( $_POST['bgcp_hard_copy'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+				$cart_item_data['bgcp_gift_card']['ship_name']      = isset( $_POST['bgcp_ship_name'] ) ? sanitize_text_field( wp_unslash( $_POST['bgcp_ship_name'] ) ) : ''; // phpcs:ignore
+				$cart_item_data['bgcp_gift_card']['ship_address_1'] = isset( $_POST['bgcp_ship_address_1'] ) ? sanitize_text_field( wp_unslash( $_POST['bgcp_ship_address_1'] ) ) : ''; // phpcs:ignore
+				$cart_item_data['bgcp_gift_card']['ship_address_2'] = isset( $_POST['bgcp_ship_address_2'] ) ? sanitize_text_field( wp_unslash( $_POST['bgcp_ship_address_2'] ) ) : ''; // phpcs:ignore
+				$cart_item_data['bgcp_gift_card']['ship_city']      = isset( $_POST['bgcp_ship_city'] ) ? sanitize_text_field( wp_unslash( $_POST['bgcp_ship_city'] ) ) : ''; // phpcs:ignore
+				$cart_item_data['bgcp_gift_card']['ship_postcode']  = isset( $_POST['bgcp_ship_postcode'] ) ? sanitize_text_field( wp_unslash( $_POST['bgcp_ship_postcode'] ) ) : ''; // phpcs:ignore
+				$cart_item_data['bgcp_gift_card']['ship_country']   = isset( $_POST['bgcp_ship_country'] ) ? sanitize_text_field( wp_unslash( $_POST['bgcp_ship_country'] ) ) : ''; // phpcs:ignore
+			}
+
 			// Unique key so identical amounts don't merge into one cart line with qty 2.
 			$cart_item_data['unique_key'] = md5( microtime() . wp_rand() );
 		}
@@ -186,6 +235,13 @@ class BGCP_Product {
 			);
 		}
 
+		if ( ! empty( $gc['hard_copy'] ) ) {
+			$item_data[] = array(
+				'name'  => __( 'Printed card by post', 'bgcp' ),
+				'value' => esc_html( self::format_ship_address( $gc ) ),
+			);
+		}
+
 		return $item_data;
 	}
 
@@ -200,5 +256,66 @@ class BGCP_Product {
 		$item->add_meta_data( '_bgcp_recipient_email', $gc['recipient_email'] );
 		$item->add_meta_data( '_bgcp_message', $gc['message'] );
 		$item->add_meta_data( '_bgcp_delivery_date', $gc['delivery_date'] );
+
+		if ( ! empty( $gc['hard_copy'] ) ) {
+			$item->add_meta_data( '_bgcp_hard_copy', 'yes' );
+			$item->add_meta_data( '_bgcp_ship_name', $gc['ship_name'] );
+			$item->add_meta_data( '_bgcp_ship_address_1', $gc['ship_address_1'] );
+			$item->add_meta_data( '_bgcp_ship_address_2', $gc['ship_address_2'] );
+			$item->add_meta_data( '_bgcp_ship_city', $gc['ship_city'] );
+			$item->add_meta_data( '_bgcp_ship_postcode', $gc['ship_postcode'] );
+			$item->add_meta_data( '_bgcp_ship_country', $gc['ship_country'] );
+		}
+	}
+
+	/**
+	 * Adds one combined fee line covering every cart item that has a
+	 * printed card requested, so a customer ordering several gift cards
+	 * with only some printed isn't overcharged.
+	 */
+	public static function apply_hard_copy_fee( $cart ) {
+		$fee_amount = BGCP_Settings::get_hard_copy_fee();
+		if ( $fee_amount <= 0 ) {
+			return;
+		}
+
+		$count = 0;
+		foreach ( $cart->get_cart() as $cart_item ) {
+			if ( ! empty( $cart_item['bgcp_gift_card']['hard_copy'] ) ) {
+				$count += max( 1, (int) $cart_item['quantity'] );
+			}
+		}
+
+		if ( $count > 0 ) {
+			$cart->add_fee( __( 'Printed & posted gift card(s)', 'bgcp' ), $fee_amount * $count, false );
+		}
+	}
+
+	private static function format_ship_address( array $gc ) {
+		$parts = array_filter(
+			array(
+				$gc['ship_name'] ?? '',
+				$gc['ship_address_1'] ?? '',
+				$gc['ship_address_2'] ?? '',
+				$gc['ship_city'] ?? '',
+				$gc['ship_postcode'] ?? '',
+				$gc['ship_country'] ?? '',
+			)
+		);
+		return implode( ', ', $parts );
+	}
+
+	public static function friendly_meta_key( $display_key, $meta ) {
+		$labels = array(
+			'_bgcp_hard_copy'      => __( 'Printed card by post', 'bgcp' ),
+			'_bgcp_ship_name'      => __( 'Postal recipient name', 'bgcp' ),
+			'_bgcp_ship_address_1' => __( 'Postal address line 1', 'bgcp' ),
+			'_bgcp_ship_address_2' => __( 'Postal address line 2', 'bgcp' ),
+			'_bgcp_ship_city'      => __( 'Postal town/city', 'bgcp' ),
+			'_bgcp_ship_postcode'  => __( 'Postal postcode', 'bgcp' ),
+			'_bgcp_ship_country'   => __( 'Postal country', 'bgcp' ),
+		);
+
+		return $labels[ $meta->key ] ?? $display_key;
 	}
 }

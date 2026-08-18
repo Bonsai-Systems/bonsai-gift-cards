@@ -5,6 +5,7 @@
  * @var array  $presets
  * @var float  $min
  * @var float  $max
+ * @var float  $hard_copy_fee
  */
 defined( 'ABSPATH' ) || exit;
 ?>
@@ -77,5 +78,60 @@ defined( 'ABSPATH' ) || exit;
 		<textarea name="bgcp_message" id="bgcp_message" rows="3" maxlength="500"></textarea>
 		<span class="description"><?php esc_html_e( "This message will be included in the gift card email, underneath the recipient's name.", 'bgcp' ); ?></span>
 	</p>
+
+	<p class="form-row form-row-wide">
+		<label for="bgcp_hard_copy">
+			<input type="checkbox" name="bgcp_hard_copy" id="bgcp_hard_copy" value="yes" />
+			<?php
+			printf(
+				/* translators: %s: printed card fee, e.g. £10.00 */
+				esc_html__( 'Also send a printed gift card by post (+%s)', 'bgcp' ),
+				wp_kses_post( wc_price( $hard_copy_fee ) )
+			);
+			?>
+		</label>
+		<span class="description" style="display:block;"><?php esc_html_e( "We'll post a printed card to the address below, as well as emailing the code.", 'bgcp' ); ?></span>
+	</p>
+
+	<div class="bgcp-hard-copy-address" style="display:none;">
+
+		<p class="form-row form-row-wide">
+			<label for="bgcp_ship_name"><?php esc_html_e( 'Recipient name', 'bgcp' ); ?></label>
+			<input type="text" name="bgcp_ship_name" id="bgcp_ship_name" style="width:100%;" />
+		</p>
+
+		<p class="form-row form-row-wide">
+			<label for="bgcp_ship_address_1"><?php esc_html_e( 'Address line 1', 'bgcp' ); ?></label>
+			<input type="text" name="bgcp_ship_address_1" id="bgcp_ship_address_1" style="width:100%;" />
+		</p>
+
+		<p class="form-row form-row-wide">
+			<label for="bgcp_ship_address_2"><?php esc_html_e( 'Address line 2 (optional)', 'bgcp' ); ?></label>
+			<input type="text" name="bgcp_ship_address_2" id="bgcp_ship_address_2" style="width:100%;" />
+		</p>
+
+		<p class="form-row form-row-first">
+			<label for="bgcp_ship_city"><?php esc_html_e( 'Town / City', 'bgcp' ); ?></label>
+			<input type="text" name="bgcp_ship_city" id="bgcp_ship_city" style="width:100%;" />
+		</p>
+
+		<p class="form-row form-row-last">
+			<label for="bgcp_ship_postcode"><?php esc_html_e( 'Postcode', 'bgcp' ); ?></label>
+			<input type="text" name="bgcp_ship_postcode" id="bgcp_ship_postcode" style="width:100%;" />
+		</p>
+
+		<?php
+		woocommerce_form_field(
+			'bgcp_ship_country',
+			array(
+				'type'    => 'country',
+				'label'   => __( 'Country', 'bgcp' ),
+				'class'   => array( 'form-row-wide', 'bgcp-ship-country' ),
+				'default' => WC()->countries ? WC()->countries->get_base_country() : 'GB',
+			)
+		);
+		?>
+
+	</div>
 
 </div>

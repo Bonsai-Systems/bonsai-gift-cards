@@ -35,6 +35,26 @@ surfaces new releases in the normal wp-admin "Update available" notice.
 5. Add the product to the Gift Vouchers page.
 6. Drop `[bgcp_balance_check]` on the Gift Vouchers page (or anywhere) so
    customers can self-serve balance lookups.
+7. Optionally set the **Printed card fee** on the Settings page (defaults to
+   £10) — this is what's charged when a customer ticks "send a printed gift
+   card by post" on the product page.
+
+## Printed gift cards
+
+- Ticking "send a printed gift card by post" on the product page reveals a
+  postal address block (name, address lines, town/city, postcode, country).
+  The address is required server-side once ticked — the same as any other
+  cost-bearing checkout option.
+- The fee is added as a single combined cart fee covering every printed
+  card in the order (so ordering several gift cards, only some printed,
+  isn't overcharged).
+- Address details are stored as order line item meta (`_bgcp_ship_*`,
+  visible on the admin order screen for whoever handles fulfilment) and
+  shown in the cart/checkout item summary. This is fulfilment data only —
+  there's no automated printing/postage integration, someone still needs
+  to actually print and post the card.
+- The digital code is still emailed as normal; the printed card is
+  additional, not a replacement.
 
 ## How redemption works
 

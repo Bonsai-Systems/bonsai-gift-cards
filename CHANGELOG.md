@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+### Added
+- "Send a printed gift card by post" option on the product page — ticking it charges a
+  configurable fee (Gift Card Settings, defaults to £10) and reveals a postal address
+  block (name, address lines, town/city, postcode, country). Address is required
+  server-side when the option is ticked, stored on the order line item, and shown in
+  the cart/checkout item summary and admin order screen for fulfilment.
+
 ## [1.1.0] - 2026-08-13
 ### Added
 - Self-hosted plugin updates via [plugin-update-checker](https://github.com/YahnisElsts/plugin-update-checker)

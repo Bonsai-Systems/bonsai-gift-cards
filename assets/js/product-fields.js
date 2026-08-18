@@ -22,4 +22,24 @@
 			}
 		} );
 	} );
+
+	$( function () {
+		var $hardCopy    = $( '#bgcp_hard_copy' );
+		if ( ! $hardCopy.length ) {
+			return;
+		}
+
+		var $addressBox  = $( '.bgcp-hard-copy-address' );
+		var $requiredFields = $addressBox.find( '#bgcp_ship_name, #bgcp_ship_address_1, #bgcp_ship_city, #bgcp_ship_postcode, #bgcp_ship_country' );
+
+		$hardCopy.on( 'change', function () {
+			if ( $hardCopy.is( ':checked' ) ) {
+				$addressBox.show();
+				$requiredFields.attr( 'required', 'required' );
+			} else {
+				$addressBox.hide();
+				$requiredFields.removeAttr( 'required' );
+			}
+		} );
+	} );
 } )( jQuery );

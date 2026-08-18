@@ -12,6 +12,7 @@ class BGCP_Settings {
 	const OPTION_EXPIRY_MONTHS = 'bgcp_default_expiry_months';
 	const OPTION_REPORT_EMAILS = 'bgcp_report_emails';
 	const OPTION_REPORT_FREQUENCIES = 'bgcp_report_frequencies';
+	const OPTION_HARD_COPY_FEE = 'bgcp_hard_copy_fee';
 
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
@@ -61,6 +62,16 @@ class BGCP_Settings {
 
 	public static function get_expiry_months() {
 		return absint( get_option( self::OPTION_EXPIRY_MONTHS, 0 ) );
+	}
+
+	/**
+	 * Fee charged for a printed/posted physical gift card, per card.
+	 * Defaults to £10 — editable so it can be changed, or reused on
+	 * another client site, without a code edit.
+	 */
+	public static function get_hard_copy_fee() {
+		$fee = get_option( self::OPTION_HARD_COPY_FEE, '' );
+		return '' === $fee ? 10.0 : (float) $fee;
 	}
 
 	/**
@@ -144,6 +155,13 @@ class BGCP_Settings {
 						</td>
 					</tr>
 					<tr>
+						<th><label for="bgcp_hard_copy_fee"><?php esc_html_e( 'Printed card fee (£)', 'bgcp' ); ?></label></th>
+						<td>
+							<input type="number" min="0" step="0.01" name="bgcp_hard_copy_fee" id="bgcp_hard_copy_fee" value="<?php echo esc_attr( self::get_hard_copy_fee() ); ?>" />
+							<p class="description"><?php esc_html_e( 'Charged per gift card when the customer chooses to have a printed card posted to the recipient, on top of the card\'s own value.', 'bgcp' ); ?></p>
+						</td>
+					</tr>
+					<tr>
 						<th><label for="bgcp_report_emails"><?php esc_html_e( 'Sales report email addresses', 'bgcp' ); ?></label></th>
 						<td>
 							<textarea name="bgcp_report_emails" id="bgcp_report_emails" rows="3" class="large-text" placeholder="one@example.com&#10;two@example.com"><?php echo esc_textarea( self::get_report_emails_raw() ); ?></textarea>
@@ -183,6 +201,7 @@ class BGCP_Settings {
 		update_option( self::OPTION_IMAGE_ID, isset( $_POST['bgcp_gift_card_image_id'] ) ? absint( $_POST['bgcp_gift_card_image_id'] ) : 0 );
 		update_option( self::OPTION_EMAIL_INTRO, isset( $_POST['bgcp_email_intro'] ) ? sanitize_textarea_field( wp_unslash( $_POST['bgcp_email_intro'] ) ) : '' );
 		update_option( self::OPTION_EXPIRY_MONTHS, isset( $_POST['bgcp_default_expiry_months'] ) ? absint( $_POST['bgcp_default_expiry_months'] ) : 0 );
+		update_option( self::OPTION_HARD_COPY_FEE, isset( $_POST['bgcp_hard_copy_fee'] ) ? wc_format_decimal( wp_unslash( $_POST['bgcp_hard_copy_fee'] ) ) : 10.0 );
 
 		$report_emails = isset( $_POST['bgcp_report_emails'] ) ? sanitize_textarea_field( wp_unslash( $_POST['bgcp_report_emails'] ) ) : '';
 		update_option( self::OPTION_REPORT_EMAILS, $report_emails );
