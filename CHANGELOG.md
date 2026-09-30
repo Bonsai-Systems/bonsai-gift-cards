@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+
+## [1.2.0] - 2026-09-30
 ### Added
 - "Send a printed gift card by post" option on the product page — ticking it charges a
   configurable fee (Gift Card Settings, defaults to £10) and reveals a postal address
@@ -22,6 +24,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   while fees (e.g. the printed card fee) kept calculating correctly. Most visible as
   the order total showing only the postage fee with no gift card amount. Now also
   reapplied on `woocommerce_get_cart_item_from_session`.
+
+### Changed
+- Products → Gift Card Codes and Gift Card Settings restyled with the Bonsai admin design system (`includes/class-bgcp-admin-ui.php`, `assets/bonsai-admin-ui.css`, new `assets/css/admin.css`): logo header with version, GitHub/changelog links and cross-links between the two screens; settings split into "Gift card email", "Cards and pricing" and "Sales reports" cards; the create form and card list sit in cards; card status shows as a badge. No option, field or handler changes.
+
+### Fixed
+- `assets/js/admin.js` built the image preview by concatenating the attachment URL into an HTML string; it now uses `.attr()`. Media modal strings are now translatable.
+- Removed inline `style` attributes (preview image, hidden buttons and rows, notices, forms); rows and buttons now use the `hidden` attribute.
+- Gift card image preview had no `alt`; search box had no label; frequency checkboxes now sit in a fieldset with a legend; `th` cells have `scope="row"`.
+- Gift Card Codes screen now checks `manage_woocommerce` itself, not just via the menu.
 
 ## [1.1.0] - 2026-08-13
 ### Added

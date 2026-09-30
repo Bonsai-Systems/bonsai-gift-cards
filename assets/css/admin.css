@@ -1,0 +1,39 @@
+/**
+ * Gift cards admin screens (Products → Gift Card Codes / Gift Card Settings).
+ * Layered on bonsai-admin-ui.css, which supplies the header, cards, form
+ * controls, buttons and badges. Enqueued on those two screens only.
+ */
+
+.bgcp-guide {
+	margin: 0 0 24px;
+}
+
+.bgcp-image-preview img {
+	display: block;
+	max-width: 400px;
+	height: auto;
+	margin-bottom: 8px;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+}
+
+/* wp-admin's .button and table-row display rules beat the UA [hidden] rule. */
+.bonsai-ui [hidden] {
+	display: none !important;
+}
+
+.bgcp-table-wrap {
+	overflow-x: auto;
+}
+
+.bgcp-table-wrap .widefat {
+	min-width: 900px;
+}
+
+.bgcp-redeem-row form,
+.bgcp-edit-row form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}

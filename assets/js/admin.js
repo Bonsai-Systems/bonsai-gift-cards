@@ -11,19 +11,22 @@ jQuery( function ( $ ) {
 			return;
 		}
 
+		var strings = window.bgcpAdmin || {};
+
 		frame = wp.media( {
-			title: 'Select Gift Card Image',
-			button: { text: 'Use this image' },
+			title: strings.mediaTitle || 'Select gift card image',
+			button: { text: strings.mediaButton || 'Use this image' },
 			multiple: false,
 		} );
 
 		frame.on( 'select', function () {
 			var attachment = frame.state().get( 'selection' ).first().toJSON();
 			$( '#bgcp_gift_card_image_id' ).val( attachment.id );
-			$( '#bgcp-image-preview' ).html(
-				'<img src="' + attachment.url + '" style="max-width:400px; display:block;" />'
+			// Built with .attr() rather than an HTML string so the URL can't inject markup.
+			$( '#bgcp-image-preview' ).empty().append(
+				$( '<img>' ).attr( { src: attachment.url, alt: strings.previewAlt || '' } )
 			);
-			$( '#bgcp-remove-image' ).show();
+			$( '#bgcp-remove-image' ).prop( 'hidden', false );
 		} );
 
 		frame.open();
@@ -32,8 +35,8 @@ jQuery( function ( $ ) {
 	$( '#bgcp-remove-image' ).on( 'click', function ( e ) {
 		e.preventDefault();
 		$( '#bgcp_gift_card_image_id' ).val( '' );
-		$( '#bgcp-image-preview' ).html( '' );
-		$( this ).hide();
+		$( '#bgcp-image-preview' ).empty();
+		$( this ).prop( 'hidden', true );
 	} );
 
 	$( document ).on( 'click', '.bgcp-confirm-disable', function ( e ) {
@@ -45,11 +48,13 @@ jQuery( function ( $ ) {
 
 	$( document ).on( 'click', '.bgcp-toggle-edit', function ( e ) {
 		e.preventDefault();
-		$( '.bgcp-edit-row[data-code="' + $( this ).data( 'code' ) + '"]' ).toggle();
+		var $row = $( '.bgcp-edit-row' ).filter( '[data-code="' + $( this ).data( 'code' ) + '"]' );
+		$row.prop( 'hidden', ! $row.prop( 'hidden' ) );
 	} );
 
 	$( document ).on( 'click', '.bgcp-toggle-redeem', function ( e ) {
 		e.preventDefault();
-		$( '.bgcp-redeem-row[data-code="' + $( this ).data( 'code' ) + '"]' ).toggle();
+		var $row = $( '.bgcp-redeem-row' ).filter( '[data-code="' + $( this ).data( 'code' ) + '"]' );
+		$row.prop( 'hidden', ! $row.prop( 'hidden' ) );
 	} );
 } );

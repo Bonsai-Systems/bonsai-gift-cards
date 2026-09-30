@@ -36,7 +36,18 @@ class BGCP_Settings {
 			return;
 		}
 		wp_enqueue_media();
+		BGCP_Admin_UI::enqueue();
+		wp_enqueue_style( 'bgcp-admin', BGCP_PLUGIN_URL . 'assets/css/admin.css', array( BGCP_Admin_UI::HANDLE ), BGCP_VERSION );
 		wp_enqueue_script( 'bgcp-admin', BGCP_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery' ), BGCP_VERSION, true );
+		wp_localize_script(
+			'bgcp-admin',
+			'bgcpAdmin',
+			array(
+				'mediaTitle'  => __( 'Select gift card image', 'bgcp' ),
+				'mediaButton' => __( 'Use this image', 'bgcp' ),
+				'previewAlt'  => __( 'Gift card image preview', 'bgcp' ),
+			)
+		);
 	}
 
 	public static function get_image_id() {
@@ -113,8 +124,19 @@ class BGCP_Settings {
 		$image_id = self::get_image_id();
 		$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'medium' ) : '';
 		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'Gift Card Settings', 'bgcp' ); ?></h1>
+		<div class="wrap bonsai-ui bonsai-ui--narrow">
+			<?php
+			BGCP_Admin_UI::header(
+				__( 'Gift Card Settings', 'bgcp' ),
+				__( 'The gift card email, default expiry for manually-created cards, printed card fee and sales reports.', 'bgcp' ),
+				array(
+					array(
+						'label' => __( 'Gift card codes', 'bgcp' ),
+						'url'   => admin_url( 'edit.php?post_type=product&page=bgcp-cards' ),
+					),
+				)
+			);
+			?>
 
 			<?php if ( isset( $_GET['updated'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Settings saved.', 'bgcp' ); ?></p></div>
@@ -124,67 +146,84 @@ class BGCP_Settings {
 				<?php wp_nonce_field( 'bgcp_save_settings' ); ?>
 				<input type="hidden" name="action" value="bgcp_save_settings" />
 
-				<table class="form-table">
-					<tr>
-						<th><?php esc_html_e( 'Gift card image', 'bgcp' ); ?></th>
-						<td>
-							<input type="hidden" name="bgcp_gift_card_image_id" id="bgcp_gift_card_image_id" value="<?php echo esc_attr( $image_id ); ?>" />
-							<div id="bgcp-image-preview">
-								<?php if ( $image_url ) : ?>
-									<img src="<?php echo esc_url( $image_url ); ?>" style="max-width:400px; display:block;" />
-								<?php endif; ?>
-							</div>
-							<p>
-								<button type="button" class="button" id="bgcp-upload-image"><?php esc_html_e( 'Select image', 'bgcp' ); ?></button>
-								<button type="button" class="button" id="bgcp-remove-image" <?php echo $image_id ? '' : 'style="display:none;"'; ?>><?php esc_html_e( 'Remove', 'bgcp' ); ?></button>
-							</p>
-							<p class="description"><?php esc_html_e( 'Shown in the gift card email.', 'bgcp' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th><label for="bgcp_email_intro"><?php esc_html_e( 'Email intro text', 'bgcp' ); ?></label></th>
-						<td>
-							<textarea name="bgcp_email_intro" id="bgcp_email_intro" rows="3" class="large-text"><?php echo esc_textarea( get_option( self::OPTION_EMAIL_INTRO, '' ) ); ?></textarea>
-						</td>
-					</tr>
-					<tr>
-						<th><label for="bgcp_default_expiry_months"><?php esc_html_e( 'Default expiry for manually-created cards (months)', 'bgcp' ); ?></label></th>
-						<td>
-							<input type="number" min="0" step="1" name="bgcp_default_expiry_months" id="bgcp_default_expiry_months" value="<?php echo esc_attr( self::get_expiry_months() ); ?>" />
-							<p class="description"><?php esc_html_e( '0 = never expires. Only applies to cards created manually from the admin list — cards sold via a product use that product\'s own expiry setting.', 'bgcp' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th><label for="bgcp_hard_copy_fee"><?php esc_html_e( 'Printed card fee (£)', 'bgcp' ); ?></label></th>
-						<td>
-							<input type="number" min="0" step="0.01" name="bgcp_hard_copy_fee" id="bgcp_hard_copy_fee" value="<?php echo esc_attr( self::get_hard_copy_fee() ); ?>" />
-							<p class="description"><?php esc_html_e( 'Charged per gift card when the customer chooses to have a printed card posted to the recipient, on top of the card\'s own value.', 'bgcp' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th><label for="bgcp_report_emails"><?php esc_html_e( 'Sales report email addresses', 'bgcp' ); ?></label></th>
-						<td>
-							<textarea name="bgcp_report_emails" id="bgcp_report_emails" rows="3" class="large-text" placeholder="one@example.com&#10;two@example.com"><?php echo esc_textarea( self::get_report_emails_raw() ); ?></textarea>
-							<p class="description"><?php esc_html_e( 'One address per line (or comma separated). Leave blank to disable. The report is sent to every valid address listed.', 'bgcp' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th><?php esc_html_e( 'Sales report frequency', 'bgcp' ); ?></th>
-						<td>
-							<?php $frequencies = self::get_report_frequencies(); ?>
-							<label>
-								<input type="checkbox" name="bgcp_report_frequencies[]" value="weekly" <?php checked( in_array( 'weekly', $frequencies, true ) ); ?> />
-								<?php esc_html_e( 'Weekly', 'bgcp' ); ?>
-							</label>
-							<br />
-							<label>
-								<input type="checkbox" name="bgcp_report_frequencies[]" value="monthly" <?php checked( in_array( 'monthly', $frequencies, true ) ); ?> />
-								<?php esc_html_e( 'Monthly', 'bgcp' ); ?>
-							</label>
-							<p class="description"><?php esc_html_e( 'Tick both to receive a weekly and a monthly report. A CSV of every gift card created in that period is emailed to the address(es) above.', 'bgcp' ); ?></p>
-						</td>
-					</tr>
-				</table>
+				<section class="bonsai-ui-card" aria-labelledby="bgcp-email-title">
+					<h2 class="bonsai-ui-card__title" id="bgcp-email-title"><?php esc_html_e( 'Gift card email', 'bgcp' ); ?></h2>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Gift card image', 'bgcp' ); ?></th>
+							<td>
+								<input type="hidden" name="bgcp_gift_card_image_id" id="bgcp_gift_card_image_id" value="<?php echo esc_attr( $image_id ); ?>" />
+								<div id="bgcp-image-preview" class="bgcp-image-preview">
+									<?php if ( $image_url ) : ?>
+										<img src="<?php echo esc_url( $image_url ); ?>" alt="<?php esc_attr_e( 'Gift card image preview', 'bgcp' ); ?>" />
+									<?php endif; ?>
+								</div>
+								<p class="bonsai-ui-actions">
+									<button type="button" class="button" id="bgcp-upload-image"><?php esc_html_e( 'Select image', 'bgcp' ); ?></button>
+									<button type="button" class="button" id="bgcp-remove-image"<?php echo $image_id ? '' : ' hidden'; ?>><?php esc_html_e( 'Remove', 'bgcp' ); ?></button>
+								</p>
+								<p class="description"><?php esc_html_e( 'Shown in the gift card email.', 'bgcp' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="bgcp_email_intro"><?php esc_html_e( 'Email intro text', 'bgcp' ); ?></label></th>
+							<td>
+								<textarea name="bgcp_email_intro" id="bgcp_email_intro" rows="3" class="large-text"><?php echo esc_textarea( get_option( self::OPTION_EMAIL_INTRO, '' ) ); ?></textarea>
+							</td>
+						</tr>
+					</table>
+				</section>
+
+				<section class="bonsai-ui-card" aria-labelledby="bgcp-cards-title">
+					<h2 class="bonsai-ui-card__title" id="bgcp-cards-title"><?php esc_html_e( 'Cards and pricing', 'bgcp' ); ?></h2>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><label for="bgcp_default_expiry_months"><?php esc_html_e( 'Default expiry for manually-created cards (months)', 'bgcp' ); ?></label></th>
+							<td>
+								<input type="number" min="0" step="1" name="bgcp_default_expiry_months" id="bgcp_default_expiry_months" value="<?php echo esc_attr( self::get_expiry_months() ); ?>" />
+								<p class="description"><?php esc_html_e( '0 = never expires. Only applies to cards created manually from the admin list — cards sold via a product use that product\'s own expiry setting.', 'bgcp' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="bgcp_hard_copy_fee"><?php esc_html_e( 'Printed card fee (£)', 'bgcp' ); ?></label></th>
+							<td>
+								<input type="number" min="0" step="0.01" name="bgcp_hard_copy_fee" id="bgcp_hard_copy_fee" value="<?php echo esc_attr( self::get_hard_copy_fee() ); ?>" />
+								<p class="description"><?php esc_html_e( 'Charged per gift card when the customer chooses to have a printed card posted to the recipient, on top of the card\'s own value.', 'bgcp' ); ?></p>
+							</td>
+						</tr>
+					</table>
+				</section>
+
+				<section class="bonsai-ui-card" aria-labelledby="bgcp-reports-title">
+					<h2 class="bonsai-ui-card__title" id="bgcp-reports-title"><?php esc_html_e( 'Sales reports', 'bgcp' ); ?></h2>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><label for="bgcp_report_emails"><?php esc_html_e( 'Sales report email addresses', 'bgcp' ); ?></label></th>
+							<td>
+								<textarea name="bgcp_report_emails" id="bgcp_report_emails" rows="3" class="large-text" placeholder="one@example.com&#10;two@example.com"><?php echo esc_textarea( self::get_report_emails_raw() ); ?></textarea>
+								<p class="description"><?php esc_html_e( 'One address per line (or comma separated). Leave blank to disable. The report is sent to every valid address listed.', 'bgcp' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Sales report frequency', 'bgcp' ); ?></th>
+							<td>
+								<?php $frequencies = self::get_report_frequencies(); ?>
+								<fieldset>
+									<legend class="screen-reader-text"><?php esc_html_e( 'Sales report frequency', 'bgcp' ); ?></legend>
+									<label>
+										<input type="checkbox" name="bgcp_report_frequencies[]" value="weekly" <?php checked( in_array( 'weekly', $frequencies, true ) ); ?> />
+										<?php esc_html_e( 'Weekly', 'bgcp' ); ?>
+									</label>
+									<label>
+										<input type="checkbox" name="bgcp_report_frequencies[]" value="monthly" <?php checked( in_array( 'monthly', $frequencies, true ) ); ?> />
+										<?php esc_html_e( 'Monthly', 'bgcp' ); ?>
+									</label>
+								</fieldset>
+								<p class="description"><?php esc_html_e( 'Tick both to receive a weekly and a monthly report. A CSV of every gift card created in that period is emailed to the address(es) above.', 'bgcp' ); ?></p>
+							</td>
+						</tr>
+					</table>
+				</section>
 
 				<?php submit_button( __( 'Save Settings', 'bgcp' ) ); ?>
 			</form>

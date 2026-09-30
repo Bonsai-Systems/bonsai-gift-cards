@@ -32,6 +32,8 @@ class BGCP_Admin {
 		if ( 'product_page_bgcp-cards' !== $hook ) {
 			return;
 		}
+		BGCP_Admin_UI::enqueue();
+		wp_enqueue_style( 'bgcp-admin', BGCP_PLUGIN_URL . 'assets/css/admin.css', array( BGCP_Admin_UI::HANDLE ), BGCP_VERSION );
 		wp_enqueue_script( 'bgcp-admin', BGCP_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery' ), BGCP_VERSION, true );
 		wp_localize_script(
 			'bgcp-admin',
@@ -54,12 +56,27 @@ class BGCP_Admin {
 	}
 
 	public function render_page() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'bgcp' ) );
+		}
+
 		$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 		$cards  = BGCP_DB::get_cards( array( 'search' => $search, 'limit' => 100 ) );
 		$view   = isset( $_GET['bgcp_view'] ) && 'create' === $_GET['bgcp_view'] ? 'create' : 'existing';
 		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'Gift Card Codes', 'bgcp' ); ?></h1>
+		<div class="wrap bonsai-ui">
+			<?php
+			BGCP_Admin_UI::header(
+				__( 'Gift Card Codes', 'bgcp' ),
+				__( 'Look up, redeem, correct and disable gift cards, or create one for a phone or in-person sale.', 'bgcp' ),
+				array(
+					array(
+						'label' => __( 'Settings', 'bgcp' ),
+						'url'   => admin_url( 'edit.php?post_type=product&page=bgcp-settings' ),
+					),
+				)
+			);
+			?>
 
 			<?php if ( isset( $_GET['bgcp_notice'] ) && 'balance_updated' === $_GET['bgcp_notice'] ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Balance updated.', 'bgcp' ); ?></p></div>
@@ -79,7 +96,7 @@ class BGCP_Admin {
 
 			<?php if ( 'create' === $view ) : ?>
 
-				<div class="notice notice-info inline" style="margin:1em 0;">
+				<div class="notice notice-info inline bgcp-guide">
 					<p>
 						<strong><?php esc_html_e( 'When to use this:', 'bgcp' ); ?></strong>
 						<?php esc_html_e( "Use this form when someone wants a gift card without going through the website checkout — a phone order, or a customer paying in person with cash or card.", 'bgcp' ); ?>
@@ -91,33 +108,36 @@ class BGCP_Admin {
 					</p>
 				</div>
 
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-bottom:2em;">
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<?php wp_nonce_field( 'bgcp_manual_create' ); ?>
 					<input type="hidden" name="action" value="bgcp_manual_create" />
-					<table class="form-table">
-						<tr>
-							<th><label for="bgcp_amount"><?php esc_html_e( 'Amount (£)', 'bgcp' ); ?></label></th>
-							<td><input type="number" step="0.01" min="1" max="1000" name="amount" id="bgcp_amount" required /></td>
-						</tr>
-						<tr>
-							<th><label for="bgcp_recipient_email"><?php esc_html_e( 'Recipient email', 'bgcp' ); ?></label></th>
-							<td><input type="email" name="recipient_email" id="bgcp_recipient_email" required /></td>
-						</tr>
-						<tr>
-							<th><label for="bgcp_recipient_name"><?php esc_html_e( 'Recipient name', 'bgcp' ); ?></label></th>
-							<td><input type="text" name="recipient_name" id="bgcp_recipient_name" /></td>
-						</tr>
-						<tr>
-							<th><label for="bgcp_send_email"><?php esc_html_e( 'Send email now?', 'bgcp' ); ?></label></th>
-							<td><input type="checkbox" name="send_email" id="bgcp_send_email" value="yes" checked /></td>
-						</tr>
-					</table>
+					<section class="bonsai-ui-card" aria-labelledby="bgcp-create-title">
+						<h2 class="bonsai-ui-card__title" id="bgcp-create-title"><?php esc_html_e( 'New gift card', 'bgcp' ); ?></h2>
+						<table class="form-table" role="presentation">
+							<tr>
+								<th scope="row"><label for="bgcp_amount"><?php esc_html_e( 'Amount (£)', 'bgcp' ); ?></label></th>
+								<td><input type="number" step="0.01" min="1" max="1000" name="amount" id="bgcp_amount" required /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="bgcp_recipient_email"><?php esc_html_e( 'Recipient email', 'bgcp' ); ?></label></th>
+								<td><input type="email" name="recipient_email" id="bgcp_recipient_email" required /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="bgcp_recipient_name"><?php esc_html_e( 'Recipient name', 'bgcp' ); ?></label></th>
+								<td><input type="text" name="recipient_name" id="bgcp_recipient_name" /></td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="bgcp_send_email"><?php esc_html_e( 'Send email now?', 'bgcp' ); ?></label></th>
+								<td><input type="checkbox" name="send_email" id="bgcp_send_email" value="yes" checked /></td>
+							</tr>
+						</table>
+					</section>
 					<?php submit_button( __( 'Create Gift Card', 'bgcp' ) ); ?>
 				</form>
 
 			<?php else : ?>
 
-				<div class="notice notice-info inline" style="margin:1em 0;">
+				<div class="notice notice-info inline bgcp-guide">
 					<p><strong><?php esc_html_e( 'Quick guide:', 'bgcp' ); ?></strong></p>
 					<p>
 						<?php esc_html_e( 'Search by code or customer email using the box below.', 'bgcp' ); ?>
@@ -129,87 +149,95 @@ class BGCP_Admin {
 					</p>
 				</div>
 
-				<form method="get" style="margin-bottom:1em;">
-					<input type="hidden" name="post_type" value="product" />
-					<input type="hidden" name="page" value="bgcp-cards" />
-					<input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Search code or email…', 'bgcp' ); ?>" />
-					<?php submit_button( __( 'Search', 'bgcp' ), '', '', false ); ?>
-				</form>
+				<section class="bonsai-ui-card" aria-labelledby="bgcp-list-title">
+					<div class="bonsai-ui-card__head">
+						<h2 class="bonsai-ui-card__title" id="bgcp-list-title"><?php esc_html_e( 'Existing cards', 'bgcp' ); ?></h2>
+						<form method="get" class="bonsai-ui-actions" role="search">
+							<input type="hidden" name="post_type" value="product" />
+							<input type="hidden" name="page" value="bgcp-cards" />
+							<label for="bgcp-search" class="screen-reader-text"><?php esc_html_e( 'Search gift cards', 'bgcp' ); ?></label>
+							<input type="search" id="bgcp-search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Search code or email…', 'bgcp' ); ?>" />
+							<?php submit_button( __( 'Search', 'bgcp' ), '', '', false ); ?>
+						</form>
+					</div>
 
-			<table class="wp-list-table widefat fixed striped">
-				<thead>
-					<tr>
-						<th><?php esc_html_e( 'Code', 'bgcp' ); ?></th>
-						<th><?php esc_html_e( 'Recipient', 'bgcp' ); ?></th>
-						<th><?php esc_html_e( 'Initial', 'bgcp' ); ?></th>
-						<th><?php esc_html_e( 'Balance', 'bgcp' ); ?></th>
-						<th><?php esc_html_e( 'Status', 'bgcp' ); ?></th>
-						<th><?php esc_html_e( 'Expires', 'bgcp' ); ?></th>
-						<th><?php esc_html_e( 'Order', 'bgcp' ); ?></th>
-						<th><?php esc_html_e( 'Paid via', 'bgcp' ); ?></th>
-						<th><?php esc_html_e( 'Actions', 'bgcp' ); ?></th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php if ( empty( $cards ) ) : ?>
-						<tr><td colspan="9"><?php esc_html_e( 'No gift cards found.', 'bgcp' ); ?></td></tr>
-					<?php else : ?>
-						<?php foreach ( $cards as $card ) : ?>
-							<tr>
-								<td><code><?php echo esc_html( $card->code ); ?></code></td>
-								<td><?php echo esc_html( $card->recipient_email ); ?></td>
-								<td><?php echo wp_kses_post( wc_price( $card->initial_amount ) ); ?></td>
-								<td><?php echo wp_kses_post( wc_price( $card->balance ) ); ?></td>
-								<td><?php echo esc_html( ucfirst( $card->status ) ); ?></td>
-								<td><?php echo $card->expires_at ? esc_html( date_i18n( 'j M Y', strtotime( $card->expires_at ) ) ) : esc_html__( 'Never', 'bgcp' ); ?></td>
-								<td><?php echo $card->order_id ? esc_html( '#' . $card->order_id ) : '—'; ?></td>
-								<td><?php echo esc_html( self::payment_method_label( $card ) ); ?></td>
-								<td>
-									<?php if ( 'active' === $card->status && $card->balance > 0 ) : ?>
-										<a href="#" class="bgcp-toggle-redeem" data-code="<?php echo esc_attr( $card->code ); ?>"><?php esc_html_e( 'Redeem', 'bgcp' ); ?></a> |
-									<?php endif; ?>
-									<a href="#" class="bgcp-toggle-edit" data-code="<?php echo esc_attr( $card->code ); ?>"><?php esc_html_e( 'Edit', 'bgcp' ); ?></a> |
-									<?php if ( 'active' === $card->status ) : ?>
-										<a href="<?php echo esc_url( $this->status_action_url( $card->code, 'disabled' ) ); ?>" class="bgcp-confirm-disable"><?php esc_html_e( 'Disable', 'bgcp' ); ?></a>
-									<?php else : ?>
-										<a href="<?php echo esc_url( $this->status_action_url( $card->code, 'active' ) ); ?>"><?php esc_html_e( 'Re-enable', 'bgcp' ); ?></a>
-									<?php endif; ?>
-								</td>
-							</tr>
-							<?php if ( 'active' === $card->status && $card->balance > 0 ) : ?>
-								<tr class="bgcp-redeem-row" data-code="<?php echo esc_attr( $card->code ); ?>" style="display:none;">
+				<div class="bgcp-table-wrap">
+				<table class="wp-list-table widefat fixed striped">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Code', 'bgcp' ); ?></th>
+							<th><?php esc_html_e( 'Recipient', 'bgcp' ); ?></th>
+							<th><?php esc_html_e( 'Initial', 'bgcp' ); ?></th>
+							<th><?php esc_html_e( 'Balance', 'bgcp' ); ?></th>
+							<th><?php esc_html_e( 'Status', 'bgcp' ); ?></th>
+							<th><?php esc_html_e( 'Expires', 'bgcp' ); ?></th>
+							<th><?php esc_html_e( 'Order', 'bgcp' ); ?></th>
+							<th><?php esc_html_e( 'Paid via', 'bgcp' ); ?></th>
+							<th><?php esc_html_e( 'Actions', 'bgcp' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php if ( empty( $cards ) ) : ?>
+							<tr><td colspan="9"><?php esc_html_e( 'No gift cards found.', 'bgcp' ); ?></td></tr>
+						<?php else : ?>
+							<?php foreach ( $cards as $card ) : ?>
+								<tr>
+									<td><code><?php echo esc_html( $card->code ); ?></code></td>
+									<td><?php echo esc_html( $card->recipient_email ); ?></td>
+									<td><?php echo wp_kses_post( wc_price( $card->initial_amount ) ); ?></td>
+									<td><?php echo wp_kses_post( wc_price( $card->balance ) ); ?></td>
+									<td><span class="bonsai-ui-badge <?php echo esc_attr( 'active' === $card->status ? 'bonsai-ui-badge--success' : 'bonsai-ui-badge--error' ); ?>"><?php echo esc_html( ucfirst( $card->status ) ); ?></span></td>
+									<td><?php echo $card->expires_at ? esc_html( date_i18n( 'j M Y', strtotime( $card->expires_at ) ) ) : esc_html__( 'Never', 'bgcp' ); ?></td>
+									<td><?php echo $card->order_id ? esc_html( '#' . $card->order_id ) : '—'; ?></td>
+									<td><?php echo esc_html( self::payment_method_label( $card ) ); ?></td>
+									<td>
+										<?php if ( 'active' === $card->status && $card->balance > 0 ) : ?>
+											<a href="#" class="bgcp-toggle-redeem" data-code="<?php echo esc_attr( $card->code ); ?>"><?php esc_html_e( 'Redeem', 'bgcp' ); ?></a> |
+										<?php endif; ?>
+										<a href="#" class="bgcp-toggle-edit" data-code="<?php echo esc_attr( $card->code ); ?>"><?php esc_html_e( 'Edit', 'bgcp' ); ?></a> |
+										<?php if ( 'active' === $card->status ) : ?>
+											<a href="<?php echo esc_url( $this->status_action_url( $card->code, 'disabled' ) ); ?>" class="bgcp-confirm-disable"><?php esc_html_e( 'Disable', 'bgcp' ); ?></a>
+										<?php else : ?>
+											<a href="<?php echo esc_url( $this->status_action_url( $card->code, 'active' ) ); ?>"><?php esc_html_e( 'Re-enable', 'bgcp' ); ?></a>
+										<?php endif; ?>
+									</td>
+								</tr>
+								<?php if ( 'active' === $card->status && $card->balance > 0 ) : ?>
+									<tr class="bgcp-redeem-row" data-code="<?php echo esc_attr( $card->code ); ?>" hidden>
+										<td colspan="9">
+											<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+												<?php wp_nonce_field( 'bgcp_redeem_card_' . $card->code ); ?>
+												<input type="hidden" name="action" value="bgcp_redeem_card" />
+												<input type="hidden" name="code" value="<?php echo esc_attr( $card->code ); ?>" />
+												<label>
+													<?php esc_html_e( 'Amount to redeem (£)', 'bgcp' ); ?>
+													<input type="number" step="0.01" min="0.01" max="<?php echo esc_attr( $card->balance ); ?>" name="redeem_amount" required />
+												</label>
+												<?php submit_button( __( 'Redeem', 'bgcp' ), 'secondary small', '', false ); ?>
+											</form>
+										</td>
+									</tr>
+								<?php endif; ?>
+								<tr class="bgcp-edit-row" data-code="<?php echo esc_attr( $card->code ); ?>" hidden>
 									<td colspan="9">
 										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-											<?php wp_nonce_field( 'bgcp_redeem_card_' . $card->code ); ?>
-											<input type="hidden" name="action" value="bgcp_redeem_card" />
+											<?php wp_nonce_field( 'bgcp_edit_balance_' . $card->code ); ?>
+											<input type="hidden" name="action" value="bgcp_edit_balance" />
 											<input type="hidden" name="code" value="<?php echo esc_attr( $card->code ); ?>" />
 											<label>
-												<?php esc_html_e( 'Amount to redeem (£)', 'bgcp' ); ?>
-												<input type="number" step="0.01" min="0.01" max="<?php echo esc_attr( $card->balance ); ?>" name="redeem_amount" required />
+												<?php esc_html_e( 'New balance (£)', 'bgcp' ); ?>
+												<input type="number" step="0.01" min="0" name="balance" value="<?php echo esc_attr( $card->balance ); ?>" required />
 											</label>
-											<?php submit_button( __( 'Redeem', 'bgcp' ), 'secondary small', '', false ); ?>
+											<?php submit_button( __( 'Save balance', 'bgcp' ), 'secondary small', '', false ); ?>
 										</form>
 									</td>
 								</tr>
-							<?php endif; ?>
-							<tr class="bgcp-edit-row" data-code="<?php echo esc_attr( $card->code ); ?>" style="display:none;">
-								<td colspan="9">
-									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-										<?php wp_nonce_field( 'bgcp_edit_balance_' . $card->code ); ?>
-										<input type="hidden" name="action" value="bgcp_edit_balance" />
-										<input type="hidden" name="code" value="<?php echo esc_attr( $card->code ); ?>" />
-										<label>
-											<?php esc_html_e( 'New balance (£)', 'bgcp' ); ?>
-											<input type="number" step="0.01" min="0" name="balance" value="<?php echo esc_attr( $card->balance ); ?>" required />
-										</label>
-										<?php submit_button( __( 'Save balance', 'bgcp' ), 'secondary small', '', false ); ?>
-									</form>
-								</td>
-							</tr>
-						<?php endforeach; ?>
-					<?php endif; ?>
-				</tbody>
-			</table>
+							<?php endforeach; ?>
+						<?php endif; ?>
+					</tbody>
+				</table>
+				</div>
+				</section>
 
 			<?php endif; ?>
 

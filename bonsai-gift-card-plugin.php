@@ -3,7 +3,7 @@
  * Plugin Name: Bonsai Gift Card Plugin
  * Plugin URI:  https://bonsaidigitalcollective.co.uk
  * Description: Simple WooCommerce gift card system — sell, email, redeem and check balance on gift cards. Built for WooCommerce Blocks Cart/Checkout with a client-configurable gift card image.
- * Version:     1.1.0
+ * Version:     1.2.0
  * Author:      The Bonsai Digital Collective
  * Author URI:  https://bonsaidigitalcollective.co.uk
  * Text Domain: bgcp
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BGCP_VERSION', '1.1.0' );
+define( 'BGCP_VERSION', '1.2.0' );
 define( 'BGCP_PLUGIN_FILE', __FILE__ );
 define( 'BGCP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BGCP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -53,6 +53,7 @@ function bgcp_init() {
 	}
 
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-db.php';
+	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-admin-ui.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-settings.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-product.php';
 	require_once BGCP_PLUGIN_DIR . 'includes/class-bgcp-order.php';
